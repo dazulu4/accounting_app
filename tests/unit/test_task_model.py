@@ -7,7 +7,7 @@ def test_task_creation_defaults():
         task_id=uuid4(),
         title="Test Task",
         description="Sample",
-        user_id=uuid4(),
+        user_id=1,
     )
     assert task.status == TaskStatus.NEW
     assert task.completed_at is None
@@ -18,7 +18,7 @@ def test_task_completion_sets_status():
         task_id=uuid4(),
         title="Test Task",
         description="Sample",
-        user_id=uuid4(),
+        user_id=1,
     )
     task.complete()
     assert task.status == TaskStatus.COMPLETED

@@ -56,7 +56,7 @@ Se creará el archivo accounting.db con la tabla tasks.
 ## 📡 Ejemplos de Endpoints
 
 ### Crear una nueva tarea
-**Endpoint:** `POST http://127.0.0.1:8000/tasks`
+**Endpoint:** `POST http://127.0.0.1:8000/api/tasks`
 
 **Descripción:** Crea una nueva tarea contable con título, descripción y usuario asignado.
 
@@ -65,7 +65,7 @@ Se creará el archivo accounting.db con la tabla tasks.
 {
   "title": "Revisión contable mensual",
   "description": "Auditoría y conciliación de cuentas",
-  "user_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+  "user_id": 1
 }
 ```
 
@@ -80,50 +80,56 @@ Se creará el archivo accounting.db con la tabla tasks.
 }
 ```
 
-> **Nota:** Si usas el `user_id` de Bob (inactivo), recibirás un error 400 con el mensaje: "Usuario no existe o está inactivo"
+> **Nota:** Si usas un `user_id` que no existe, recibirás un error 400 con el mensaje: "Usuario no existe o está inactivo"
 
 ### Listar tareas de un usuario
-**Endpoint:** `GET http://127.0.0.1:8000/tasks/{user_id}`
+**Endpoint:** `GET http://127.0.0.1:8000/api/tasks/{user_id}`
 
 **Descripción:** Obtiene todas las tareas asociadas a un usuario específico.
 
 **Ejemplo:**
 ```bash
-GET http://127.0.0.1:8000/tasks/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+GET http://127.0.0.1:8000/api/tasks/1
 ```
 
+### Listar todos los usuarios activos
+**Endpoint:** `GET http://127.0.0.1:8000/api/users`
+
+**Descripción:** Obtiene la lista de todos los usuarios activos en el sistema.
+
 ### Completar una tarea
-**Endpoint:** `PUT http://127.0.0.1:8000/tasks/{task_id}/complete`
+**Endpoint:** `PUT http://127.0.0.1:8000/api/tasks/{task_id}/complete`
 
 **Descripción:** Marca una tarea como completada y actualiza su timestamp de finalización.
 
 **Ejemplo:**
 ```bash
-PUT http://127.0.0.1:8000/tasks/<TASK_ID>/complete
+PUT http://127.0.0.1:8000/api/tasks/<TASK_ID>/complete
 ```
 
 > **Nota:** Este endpoint emite un evento informando que la tarea fue completada. La salida en consola será algo como: `[EVENT] TaskCompleted: task_id=..., user_id=...`
 
 ### Simular evento externo (inactivar usuario)
-**Endpoint:** `POST http://127.0.0.1:8000/users/{user_id}/deactivate`
+**Endpoint:** `POST http://127.0.0.1:8000/api/users/{user_id}/deactivate`
 
 **Descripción:** Simula la inactivación de un usuario mediante un evento externo.
 
 **Ejemplo:**
 ```bash
-POST http://127.0.0.1:8000/users/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/deactivate
+POST http://127.0.0.1:8000/api/users/1/deactivate
 ```
 
-> **Nota:** La salida en consola será: `[EVENT RECEIVED] Usuario aaaaaaaa-... inactivado`
+> **Nota:** La salida en consola será: `[EVENT RECEIVED] Usuario 1 inactivado`
 
 ## 📋 Resumen de Endpoints
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `/tasks/{user_id}` | Lista las tareas de un usuario |
-| POST | `/tasks` | Crea una nueva tarea |
-| PUT | `/tasks/{task_id}/complete` | Completa una tarea existente |
-| POST | `/users/{user_id}/deactivate` | Simula inactivación de usuario (evento externo) |
+| GET | `/api/users` | Lista todos los usuarios activos |
+| GET | `/api/tasks/{user_id}` | Lista las tareas de un usuario |
+| POST | `/api/tasks` | Crea una nueva tarea |
+| PUT | `/api/tasks/{task_id}/complete` | Completa una tarea existente |
+| POST | `/api/users/{user_id}/deactivate` | Simula inactivación de usuario (evento externo) |
 
 ## 🧱 Estructura del Proyecto (Clean Architecture)
 
@@ -211,9 +217,9 @@ Con esta base, el backend está listo para desarrollo colaborativo, integración
 ### Opción B – Iniciar Frontend Angular 19/20
 
 - Conexión a endpoints existentes:
-  - `POST /tasks`
-  - `GET /tasks/{user_id}`
-  - `PUT /tasks/{task_id}/complete`
+  - `POST /api/tasks`
+  - `GET /api/tasks/{user_id}`
+  - `PUT /api/tasks/{task_id}/complete`
 - Creación de componentes para usuarios, tareas y eventos
 - Desarrollo de tablero contable (futuro módulo funcional)
 

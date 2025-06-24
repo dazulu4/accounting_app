@@ -8,5 +8,5 @@ class ListTasksByUserUseCase:
     def __init__(self, task_gateway: TaskGateway):
         self.task_gateway = task_gateway
 
-    async def execute(self, user_id: UUID) -> List[Task]:
+    async def execute(self, user_id: int) -> List[Task]:
         return await self.task_gateway.list_by_user(user_id)

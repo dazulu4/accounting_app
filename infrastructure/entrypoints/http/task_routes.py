@@ -12,7 +12,7 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 class TaskCreateInput(BaseModel):
     title: str
     description: str
-    user_id: UUID
+    user_id: int
 
 
 @router.post("")
@@ -35,7 +35,7 @@ async def create_task(
 
 @router.get("/{user_id}")
 async def list_tasks_by_user(
-    user_id: UUID,
+    user_id: int,
     usecase: ListTasksByUserUseCase = Depends(get_list_tasks_usecase),
 ):
     tasks = await usecase.execute(user_id)

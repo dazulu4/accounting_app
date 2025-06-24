@@ -15,7 +15,7 @@ class TaskModel(Base):
     task_id: Mapped[UUID] = mapped_column(primary_key=True)
     title: Mapped[str]
     description: Mapped[str]
-    user_id: Mapped[UUID]
+    user_id: Mapped[int]
     status: Mapped[str]
     created_at: Mapped[str]
     completed_at: Mapped[str | None]
@@ -68,7 +68,7 @@ class SQLAlchemyTaskRepository(TaskGateway):
         model = await self.db.get(TaskModel, task_id)
         return model_to_task(model) if model else None
 
-    async def list_by_user(self, user_id: UUID) -> List[Task]:
+    async def list_by_user(self, user_id: int) -> List[Task]:
         result = await self.db.execute(
             select(TaskModel).where(TaskModel.user_id == user_id)
         )

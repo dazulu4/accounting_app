@@ -3,7 +3,7 @@ from domain.models.user import UserStatus
 from infrastructure.driven_adapters.repositories.user_repository_fake import FAKE_USERS
 
 
-def on_user_activated_event(user_id: UUID):
+def on_user_activated_event(user_id: int):
     user = FAKE_USERS.get(user_id)
     if user:
         user.status = UserStatus.ACTIVE
@@ -12,7 +12,7 @@ def on_user_activated_event(user_id: UUID):
         print(f"[EVENT RECEIVED] Usuario {user_id} no encontrado")
 
 
-def on_user_deactivated_event(user_id: UUID):
+def on_user_deactivated_event(user_id: int):
     user = FAKE_USERS.get(user_id)
     if user:
         user.status = UserStatus.INACTIVE

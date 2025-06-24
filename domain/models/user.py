@@ -8,7 +8,7 @@ class UserStatus(str, Enum):
 
 
 class User:
-    def __init__(self, user_id: UUID, name: str, status: UserStatus):
+    def __init__(self, user_id: int, name: str, status: UserStatus):
         self.user_id = user_id
         self.name = name
         self.status = status

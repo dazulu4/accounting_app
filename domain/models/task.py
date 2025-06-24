@@ -11,7 +11,7 @@ class TaskStatus(str, Enum):
 
 
 class Task:
-    def __init__(self, task_id: UUID, title: str, description: str, user_id: UUID):
+    def __init__(self, task_id: UUID, title: str, description: str, user_id: int):
         self.task_id = task_id
         self.title = title
         self.description = description

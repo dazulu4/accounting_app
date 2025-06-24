@@ -9,7 +9,7 @@ class CreateTaskUseCase:
         self.task_gateway = task_gateway
         self.user_gateway = user_gateway
 
-    async def execute(self, title: str, description: str, user_id: UUID) -> Task:
+    async def execute(self, title: str, description: str, user_id: int) -> Task:
         user = self.user_gateway.get_by_id(user_id)
         if user is None or not user.is_active():
             raise ValueError("Usuario no existe o está inactivo")

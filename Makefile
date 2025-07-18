@@ -1,5 +1,5 @@
 run:
-	poetry run uvicorn application.main:app --reload
+	poetry run python application/main.py
 
 db-init:
 	poetry run python infrastructure/helpers/database/init_db.py

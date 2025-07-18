@@ -1,64 +1,127 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+"""
+Rutas HTTP para la gestión de tareas usando Flask
+
+Beneficios de usar Flask:
+- Más ligero y rápido
+- Mayor control sobre el manejo de errores
+- Mejor compatibilidad con AWS Lambda
+- Validaciones manuales más flexibles
+"""
+
+from flask import Blueprint, jsonify, request
+from typing import List
 from uuid import UUID
+
 from application.di_container import get_create_task_usecase, get_complete_task_usecase, get_list_tasks_usecase
 from domain.usecases.create_task import CreateTaskUseCase
 from domain.usecases.complete_task import CompleteTaskUseCase
 from domain.usecases.list_tasks_by_user import ListTasksByUserUseCase
 
-router = APIRouter(prefix="/tasks", tags=["Tasks"])
+# Importar schemas Pydantic
+from application.schemas.task_schema import (
+    TaskCreate,
+    TaskResponse,
+    TaskListResponse,
+    TaskCompleteRequest
+)
+from pydantic import ValidationError
+
+# Crear Blueprint
+blueprint = Blueprint('tasks', __name__)
 
 
-class TaskCreateInput(BaseModel):
-    title: str
-    description: str
-    user_id: int
-
-
-@router.post("")
-async def create_task(
-    payload: TaskCreateInput,
-    usecase: CreateTaskUseCase = Depends(get_create_task_usecase),
-):
+@blueprint.route("", methods=['POST'])
+def create_task():
+    """
+    Crea una nueva tarea
+    
+    ¿Qué cambia con Flask?
+    - Validación manual de datos de entrada con Pydantic
+    - Manejo manual de errores HTTP
+    - Conversión manual a JSON
+    """
     try:
-        task = await usecase.execute(payload.title, payload.description, payload.user_id)
-        return {
-            "task_id": str(task.task_id),
-            "title": task.title,
-            "description": task.description,
-            "status": task.status,
-            "created_at": str(task.created_at),
-        }
+        # Obtener datos del request
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No se proporcionaron datos JSON"}), 400
+        
+        # Validar datos con Pydantic
+        try:
+            task_create = TaskCreate(**data)
+        except ValidationError as e:
+            return jsonify({"error": "Datos inválidos", "details": e.errors()}), 400
+        
+        # Obtener caso de uso
+        usecase = get_create_task_usecase()
+        
+        # Ejecutar caso de uso
+        task = usecase.execute(task_create.title, task_create.description, task_create.user_id)
+        
+        # Convertir a schema de respuesta
+        response_task = TaskResponse.model_validate(task)
+        
+        # Retornar JSON
+        return jsonify(response_task.model_dump()), 201
+        
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        # Errores de lógica de negocio
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        # Errores inesperados
+        return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
 
 
-@router.get("/{user_id}")
-async def list_tasks_by_user(
-    user_id: int,
-    usecase: ListTasksByUserUseCase = Depends(get_list_tasks_usecase),
-):
-    tasks = await usecase.execute(user_id)
-    return [
-        {
-            "task_id": str(t.task_id),
-            "title": t.title,
-            "description": t.description,
-            "status": t.status,
-            "created_at": str(t.created_at),
-            "completed_at": str(t.completed_at) if t.completed_at else None,
-        }
-        for t in tasks
-    ]
-
-
-@router.put("/{task_id}/complete")
-async def complete_task(
-    task_id: UUID,
-    usecase: CompleteTaskUseCase = Depends(get_complete_task_usecase),
-):
+@blueprint.route("/<int:user_id>", methods=['GET'])
+def list_tasks_by_user(user_id: int):
+    """
+    Lista todas las tareas de un usuario específico
+    
+    ¿Qué cambia con Flask?
+    - No usa response_model automático
+    - Conversión manual a JSON
+    - Manejo manual de errores
+    """
     try:
-        await usecase.execute(task_id)
-        return {"message": f"Tarea {task_id} completada"}
+        # Obtener caso de uso
+        usecase = get_list_tasks_usecase()
+        
+        # Ejecutar caso de uso
+        tasks = usecase.execute(user_id)
+        
+        # Convertir cada tarea a schema de respuesta
+        task_responses = [TaskResponse.model_validate(task) for task in tasks]
+        
+        # Convertir a JSON
+        return jsonify([task.model_dump() for task in task_responses])
+        
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
+
+
+@blueprint.route("/<uuid:task_id>/complete", methods=['PUT'])
+def complete_task(task_id: UUID):
+    """
+    Marca una tarea como completada
+    
+    ¿Qué cambia con Flask?
+    - Manejo manual de UUID en la URL
+    - Validación manual de parámetros
+    - Manejo manual de errores HTTP
+    """
+    try:
+        # Obtener caso de uso
+        usecase = get_complete_task_usecase()
+        
+        # Ejecutar caso de uso
+        usecase.execute(task_id)
+        
+        return jsonify({"message": f"Tarea {task_id} completada exitosamente"})
+        
+    except ValueError as e:
+        # Tarea no encontrada o ya completada
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500

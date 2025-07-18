@@ -1,6 +1,6 @@
 # Accounting App Backend
 
-Backend Python basado en Clean Architecture usando FastAPI.
+Backend Python basado en Clean Architecture usando Flask.
 
 ## 🚀 Requisitos
 
@@ -23,7 +23,7 @@ poetry install
 
 **Opción recomendada (más confiable):**
 ```bash
-poetry run uvicorn application.main:app --reload
+poetry run python application/main.py
 ```
 
 **Opción alternativa (puede tener problemas con rutas largas):**
@@ -32,18 +32,18 @@ poetry run uvicorn application.main:app --reload
 poetry env activate
 
 # Ejecutar servidor
-uvicorn application.main:app --reload
+python application/main.py
 ```
 
 > **Nota**: Se recomienda usar `poetry run` ya que evita problemas con rutas largas de Windows y es más confiable en diferentes entornos.
 
-## 🧰 Configuración de Base de Datos (SQLite + SQLAlchemy)
-Esta aplicación utiliza SQLAlchemy 2.x en modo async con SQLite como motor local de base de datos.
+## 🧰 Configuración de Base de Datos (MySQL + SQLAlchemy)
+Esta aplicación utiliza SQLAlchemy 2.x en modo async con MySQL 8 como motor de base de datos.
 
 ### 📦 Requisitos
 ```
 poetry add sqlalchemy --extras asyncio
-poetry add aiosqlite
+poetry add aiomysql pymysql
 ```
 
 ### 🛠 Inicializar la base de datos
@@ -136,7 +136,7 @@ POST http://127.0.0.1:8000/api/users/1/deactivate
 ```
 accounting_app/
 ├── application/                # Capa de orquestación e inicio
-│   ├── main.py                 # FastAPI app principal
+│   ├── main.py                 # Flask app principal
 │   └── di_container.py         # Inyección de dependencias
 ├── domain/                     # Capa de dominio puro (negocio)
 │   ├── models/                 # Entidades de dominio (User, Task)
@@ -148,7 +148,7 @@ accounting_app/
 │   │   ├── event_sender/       # Emisión de eventos (simulado)
 │   │   └── event_receiver/     # Recepción de eventos (simulado)
 │   ├── entrypoints/
-│   │   └── http/               # Rutas FastAPI (tasks, users)
+│   │   └── http/               # Rutas Flask (tasks, users)
 │   └── helpers/                # Init DB, logging, utilidades
 ├── tests/                      # Pruebas unitarias
 ├── pyproject.toml              # Configuración de dependencias con Poetry
@@ -160,8 +160,8 @@ accounting_app/
 Usa `make` en Linux/macOS:
 
 ```bash
-make run        # Inicia el servidor FastAPI en modo desarrollo
-make db-init    # Inicializa la base de datos SQLite
+make run        # Inicia el servidor Flask en modo desarrollo
+make db-init    # Inicializa la base de datos MySQL
 make test       # Ejecuta pruebas unitarias
 ```
 
@@ -195,7 +195,7 @@ Con esta base, el backend está listo para desarrollo colaborativo, integración
 ### ✅ Características actuales
 
 - 🧱 Arquitectura Clean Architecture desacoplada y mantenible
-- ⚡️ Backend en FastAPI + SQLAlchemy async + SQLite (listo para migrar a MySQL)
+- ⚡️ Backend en Flask + SQLAlchemy async + MySQL 8
 - 📁 Separación clara en módulos: application, domain, infrastructure
 - 🧪 Tests básicos incluidos
 - 🚀 Sistema de comandos rápidos (`make` o `make.bat`)

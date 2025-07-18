@@ -1,0 +1,202 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Accounting App - Serverless API con Flask y MySQL
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.11
+    Environment:
+      Variables:
+        ENVIRONMENT: production
+        LOG_LEVEL: INFO
+    Tags:
+      Project: accounting-app
+      Environment: production
+
+Parameters:
+  DatabaseHost:
+    Type: String
+    Default: localhost
+    Description: Host de la base de datos MySQL
+  DatabaseName:
+    Type: String
+    Default: accounting
+    Description: Nombre de la base de datos
+  DatabaseUser:
+    Type: String
+    Default: admin
+    Description: Usuario de la base de datos
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    Description: Contraseña de la base de datos
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Ambiente de despliegue
+
+Resources:
+  # API Gateway
+  AccountingApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+      DefinitionBody:
+        openapi: 3.0.1
+        info:
+          title: Accounting App API
+          version: 1.0.0
+          description: API para gestión contable
+        paths:
+          /health:
+            get:
+              summary: Health check
+              responses:
+                '200':
+                  description: OK
+          /tasks:
+            get:
+              summary: Listar tareas
+              responses:
+                '200':
+                  description: Lista de tareas
+            post:
+              summary: Crear tarea
+              responses:
+                '201':
+                  description: Tarea creada
+          /tasks/{task_id}:
+            get:
+              summary: Obtener tarea
+              parameters:
+                - name: task_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+              responses:
+                '200':
+                  description: Tarea encontrada
+                '404':
+                  description: Tarea no encontrada
+            put:
+              summary: Actualizar tarea
+              parameters:
+                - name: task_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+              responses:
+                '200':
+                  description: Tarea actualizada
+          /tasks/{task_id}/complete:
+            post:
+              summary: Completar tarea
+              parameters:
+                - name: task_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+              responses:
+                '200':
+                  description: Tarea completada
+          /users:
+            get:
+              summary: Listar usuarios
+              responses:
+                '200':
+                  description: Lista de usuarios
+
+  # Lambda Function para la API
+  AccountingApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: application.lambda_handler.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AccountingApi
+            Path: /{proxy+}
+            Method: ANY
+      Environment:
+        Variables:
+          DATABASE_HOST: !Ref DatabaseHost
+          DATABASE_NAME: !Ref DatabaseName
+          DATABASE_USER: !Ref DatabaseUser
+          DATABASE_PASSWORD: !Ref DatabasePassword
+          ENVIRONMENT: !Ref Environment
+      Policies:
+        - CloudWatchLogsFullAccess
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+
+  # CloudWatch Log Group
+  AccountingApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AccountingApiFunction}
+      RetentionInDays: 14
+
+  # IAM Role para la función Lambda
+  AccountingApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: AccountingAppPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+Outputs:
+  AccountingApi:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${AccountingApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiUrl"
+  
+  AccountingApiFunction:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt AccountingApiFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-FunctionArn"
+  
+  AccountingApiFunctionRole:
+    Description: "Lambda Function IAM Role ARN"
+    Value: !GetAtt AccountingApiRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-FunctionRoleArn" 

@@ -1,6 +1,6 @@
 from typing import List
 from uuid import UUID
-from sqlalchemy import select
+from sqlalchemy import select, String, DateTime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.models.task import Task, TaskStatus
@@ -13,12 +13,12 @@ class TaskModel(Base):
     __tablename__ = "tasks"
 
     task_id: Mapped[UUID] = mapped_column(primary_key=True)
-    title: Mapped[str]
-    description: Mapped[str]
-    user_id: Mapped[int]
-    status: Mapped[str]
-    created_at: Mapped[str]
-    completed_at: Mapped[str | None]
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(String(1000), nullable=False)
+    user_id: Mapped[int] = mapped_column(nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_at: Mapped[str] = mapped_column(DateTime, nullable=False)
+    completed_at: Mapped[str | None] = mapped_column(DateTime, nullable=True)
 
 
 def task_to_model(task: Task) -> TaskModel:
@@ -46,7 +46,7 @@ def model_to_task(model: TaskModel) -> Task:
     return task
 
 
-class SQLAlchemyTaskRepository(TaskGateway):
+class TaskDataRepository(TaskGateway):
     def __init__(self, db_session: AsyncSession):
         self.db = db_session
 

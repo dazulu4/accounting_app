@@ -1,6 +1,6 @@
 @echo off
 IF "%1"=="run" (
-    poetry run uvicorn application.main:app --reload
+    poetry run python application/main.py
 ) ELSE IF "%1"=="db-init" (
     poetry run python infrastructure/helpers/database/init_db.py
 ) ELSE IF "%1"=="test" (

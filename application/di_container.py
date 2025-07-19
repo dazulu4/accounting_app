@@ -1,32 +1,38 @@
-from infrastructure.driven_adapters.repositories.task_repository import TaskDataRepository
-from infrastructure.driven_adapters.repositories.user_repository_fake import FakeUserService
-from domain.usecases.create_task import CreateTaskUseCase
-from infrastructure.driven_adapters.repositories.base import SessionLocal
-from domain.usecases.complete_task import CompleteTaskUseCase
-from domain.usecases.list_tasks_by_user import ListTasksByUserUseCase
-from domain.usecases.list_all_users import ListAllUsersUseCase
-from infrastructure.driven_adapters.event_sender.mock_event_bus import MockEventBus
+"""
+Dependency Injection Container - Enterprise Wrapper
 
-def get_create_task_usecase():
-    db_session = SessionLocal()
-    task_repo = TaskDataRepository(db_session)
-    user_gateway = FakeUserService()
-    return CreateTaskUseCase(task_repo, user_gateway)
+Clean wrapper around the new enterprise DI container.
+Maintains compatibility with existing route functions while using the new system.
 
+Key Features:
+- Backward compatibility with existing functions
+- Uses new enterprise DI container under the hood
+- Clean and simple implementation
+- No dead code
+"""
 
-def get_complete_task_usecase():
-    db_session = SessionLocal()
-    task_repo = TaskDataRepository(db_session)
-    event_bus = MockEventBus()
-    return CompleteTaskUseCase(task_repo, event_bus)
+from infrastructure.helpers.di import resolve_service, get_current_container
+from domain.usecases.create_task_use_case import CreateTaskUseCase
+from domain.usecases.complete_task_use_case import CompleteTaskUseCase
+from domain.usecases.list_tasks_by_user_use_case import ListTasksByUserUseCase
+from domain.usecases.list_all_users_use_case import ListAllUsersUseCase
 
 
-def get_list_tasks_usecase():
-    db_session = SessionLocal()
-    task_repo = TaskDataRepository(db_session)
-    return ListTasksByUserUseCase(task_repo)
+def get_create_task_usecase() -> CreateTaskUseCase:
+    """Get CreateTaskUseCase from DI container"""
+    return resolve_service(CreateTaskUseCase)
 
 
-def get_list_all_users_usecase():
-    user_gateway = FakeUserService()
-    return ListAllUsersUseCase(user_gateway)
+def get_complete_task_usecase() -> CompleteTaskUseCase:
+    """Get CompleteTaskUseCase from DI container"""
+    return resolve_service(CompleteTaskUseCase)
+
+
+def get_list_tasks_usecase() -> ListTasksByUserUseCase:
+    """Get ListTasksByUserUseCase from DI container"""
+    return resolve_service(ListTasksByUserUseCase)
+
+
+def get_list_all_users_usecase() -> ListAllUsersUseCase:
+    """Get ListAllUsersUseCase from DI container"""
+    return resolve_service(ListAllUsersUseCase)

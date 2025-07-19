@@ -1,202 +1,258 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Accounting App - Serverless API con Flask y MySQL
+  Enterprise Accounting App - Serverless API with Flask, MySQL and Clean Architecture
+  Professional deployment with environment-specific configuration and secrets management
 
-Globals:
-  Function:
-    Timeout: 30
-    MemorySize: 512
-    Runtime: python3.11
-    Environment:
-      Variables:
-        ENVIRONMENT: production
-        LOG_LEVEL: INFO
-    Tags:
-      Project: accounting-app
-      Environment: production
-
+# =============================================================================
+# PARAMETERS - Environment-specific configuration
+# =============================================================================
 Parameters:
-  DatabaseHost:
-    Type: String
-    Default: localhost
-    Description: Host de la base de datos MySQL
-  DatabaseName:
-    Type: String
-    Default: accounting
-    Description: Nombre de la base de datos
-  DatabaseUser:
-    Type: String
-    Default: admin
-    Description: Usuario de la base de datos
-  DatabasePassword:
-    Type: String
-    NoEcho: true
-    Description: Contraseña de la base de datos
   Environment:
     Type: String
-    Default: production
+    Default: development
     AllowedValues:
       - development
       - staging
       - production
-    Description: Ambiente de despliegue
+    Description: Deployment environment
 
+  DatabaseHost:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: !Sub '/accounting-app/${Environment}/database/host'
+    Description: Database host from SSM Parameter Store
+    
+  DatabaseName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: !Sub '/accounting-app/${Environment}/database/name'
+    Description: Database name from SSM Parameter Store
+    
+  DatabaseUsername:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: !Sub '/accounting-app/${Environment}/database/username'
+    Description: Database username from SSM Parameter Store
+    
+  DatabasePasswordSecret:
+    Type: String
+    Default: !Sub 'accounting-app/${Environment}/database/password'
+    Description: Database password secret name in Secrets Manager
+
+  LogLevel:
+    Type: String
+    Default: !If [IsProduction, INFO, DEBUG]
+    AllowedValues:
+      - DEBUG
+      - INFO
+      - WARNING
+      - ERROR
+      - CRITICAL
+    Description: Application logging level
+
+# =============================================================================
+# CONDITIONS - Environment-specific logic
+# =============================================================================
+Conditions:
+  IsProduction: !Equals [!Ref Environment, production]
+  IsStaging: !Equals [!Ref Environment, staging]
+  IsDevelopment: !Equals [!Ref Environment, development]
+  IsNotProduction: !Not [!Equals [!Ref Environment, production]]
+
+# =============================================================================
+# GLOBALS - Shared configuration for all functions
+# =============================================================================
+Globals:
+  Function:
+    Timeout: !If [IsProduction, 30, 60]
+    MemorySize: !If [IsProduction, 1024, 512]
+    Runtime: python3.11
+    Tracing: Active
+    Environment:
+      Variables:
+        # Application Configuration
+        APP_ENVIRONMENT: !Ref Environment
+        APP_DEBUG: !If [IsProduction, 'false', 'true']
+        APP_VERSION: "2.0.0"
+        
+        # Logging Configuration  
+        LOG_LEVEL: !Ref LogLevel
+        LOG_FORMAT: !If [IsProduction, json, console]
+        
+        # API Configuration
+        API_PREFIX: /api
+        API_VERSION: v1
+        
+        # AWS Configuration
+        AWS_REGION: !Ref AWS::Region
+        LAMBDA_FUNCTION_NAME: !Sub "${AWS::StackName}-api-function"
+        
+    Tags:
+      Project: accounting-app
+      Environment: !Ref Environment
+      ManagedBy: SAM
+      Version: "2.0.0"
+
+# =============================================================================
+# RESOURCES - AWS Resources
+# =============================================================================
 Resources:
-  # API Gateway
-  AccountingApi:
-    Type: AWS::Serverless::Api
-    Properties:
-      StageName: !Ref Environment
-      Cors:
-        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
-        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-        AllowOrigin: "'*'"
-      DefinitionBody:
-        openapi: 3.0.1
-        info:
-          title: Accounting App API
-          version: 1.0.0
-          description: API para gestión contable
-        paths:
-          /health:
-            get:
-              summary: Health check
-              responses:
-                '200':
-                  description: OK
-          /tasks:
-            get:
-              summary: Listar tareas
-              responses:
-                '200':
-                  description: Lista de tareas
-            post:
-              summary: Crear tarea
-              responses:
-                '201':
-                  description: Tarea creada
-          /tasks/{task_id}:
-            get:
-              summary: Obtener tarea
-              parameters:
-                - name: task_id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-              responses:
-                '200':
-                  description: Tarea encontrada
-                '404':
-                  description: Tarea no encontrada
-            put:
-              summary: Actualizar tarea
-              parameters:
-                - name: task_id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-              responses:
-                '200':
-                  description: Tarea actualizada
-          /tasks/{task_id}/complete:
-            post:
-              summary: Completar tarea
-              parameters:
-                - name: task_id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-              responses:
-                '200':
-                  description: Tarea completada
-          /users:
-            get:
-              summary: Listar usuarios
-              responses:
-                '200':
-                  description: Lista de usuarios
-
-  # Lambda Function para la API
+  
+  # ==========================================================================
+  # LAMBDA FUNCTION - Main API Handler
+  # ==========================================================================
   AccountingApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      FunctionName: !Sub 'accounting-app-api-${Environment}'
+      Description: !Sub 'Enterprise Accounting API - ${Environment} Environment'
+      CodeUri: package/
       Handler: application.lambda_handler.handler
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            RestApiId: !Ref AccountingApi
-            Path: /{proxy+}
-            Method: ANY
+      
+      # Environment Variables
       Environment:
         Variables:
+          # Database Configuration (with Secrets Manager integration)
           DATABASE_HOST: !Ref DatabaseHost
-          DATABASE_NAME: !Ref DatabaseName
-          DATABASE_USER: !Ref DatabaseUser
-          DATABASE_PASSWORD: !Ref DatabasePassword
-          ENVIRONMENT: !Ref Environment
+          DATABASE_PORT: '3306'
+          DATABASE_NAME: !Ref DatabaseName  
+          DATABASE_USERNAME: !Ref DatabaseUsername
+          DATABASE_PASSWORD: !Sub '{{resolve:secretsmanager:${DatabasePasswordSecret}:SecretString:password}}'
+          DATABASE_CONNECTION_TIMEOUT: '30'
+          DATABASE_POOL_SIZE: !If [IsProduction, '20', '5']
+          DATABASE_ECHO: !If [IsProduction, 'false', 'true']
+          DATABASE_POOL_RECYCLE: '3600'
+          
+      # Performance Configuration
+      ReservedConcurrencyLimit: !If [IsProduction, 100, !If [IsStaging, 50, 10]]
+      
+      # IAM Permissions
       Policies:
-        - CloudWatchLogsFullAccess
-        - Statement:
+        - Version: "2012-10-17"
+          Statement:
+            # Secrets Manager Access
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${DatabasePasswordSecret}*'
+            
+            # SSM Parameter Store Access
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+              Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/accounting-app/${Environment}/*'
+            
+            # CloudWatch Logs
             - Effect: Allow
               Action:
                 - logs:CreateLogGroup
                 - logs:CreateLogStream
                 - logs:PutLogEvents
-              Resource: '*'
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*'
+            
+            # X-Ray Tracing
+            - Effect: Allow
+              Action:
+                - xray:PutTraceSegments
+                - xray:PutTelemetryRecords
+              Resource: "*"
 
-  # CloudWatch Log Group
-  AccountingApiLogGroup:
+      # API Gateway Integration
+      Events:
+        ApiGateway:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AccountingApi
+            Path: /{proxy+}
+            Method: ANY
+            
+  # ==========================================================================
+  # API GATEWAY - REST API
+  # ==========================================================================
+  AccountingApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub 'accounting-app-api-${Environment}'
+      StageName: !Ref Environment
+      Description: !Sub 'Enterprise Accounting API Gateway - ${Environment}'
+      
+      # CORS Configuration
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS,PATCH'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Request-ID'"
+        AllowOrigin: !If [IsProduction, "'https://app.accounting.com'", "'*'"]
+        AllowCredentials: false
+        MaxAge: "'600'"
+      
+      # Gateway Responses
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseTemplates:
+            "application/json": '{"error":{"type":"CLIENT_ERROR","message":"$context.error.message","timestamp":"$context.requestTime","path":"$context.path"}}'
+        DEFAULT_5XX:
+          ResponseTemplates:
+            "application/json": '{"error":{"type":"SERVER_ERROR","message":"Internal server error","timestamp":"$context.requestTime","path":"$context.path"}}'
+      
+      # Access Logging
+      AccessLogSetting:
+        DestinationArn: !Sub '${ApiGatewayLogGroup.Arn}'
+        Format: !Sub |
+          {
+            "requestId": "$context.requestId",
+            "requestTime": "$context.requestTime",
+            "httpMethod": "$context.httpMethod",
+            "path": "$context.path",
+            "status": "$context.status",
+            "responseLength": "$context.responseLength",
+            "responseTime": "$context.responseTime",
+            "userAgent": "$context.identity.userAgent",
+            "sourceIp": "$context.identity.sourceIp"
+          }
+
+  # ==========================================================================
+  # CLOUDWATCH LOG GROUPS
+  # ==========================================================================
+  ApiGatewayLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${AccountingApiFunction}
-      RetentionInDays: 14
+      LogGroupName: !Sub '/aws/apigateway/accounting-app-${Environment}'
+      RetentionInDays: !If [IsProduction, 30, 7]
 
-  # IAM Role para la función Lambda
-  AccountingApiRole:
-    Type: AWS::IAM::Role
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
     Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        - PolicyName: AccountingAppPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: '*'
+      LogGroupName: !Sub '/aws/lambda/accounting-app-api-${Environment}'
+      RetentionInDays: !If [IsProduction, 30, 7]
 
+# =============================================================================
+# OUTPUTS - Stack outputs for reference
+# =============================================================================
 Outputs:
-  AccountingApi:
-    Description: "API Gateway endpoint URL"
-    Value: !Sub "https://${AccountingApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/"
+  ApiUrl:
+    Description: API Gateway endpoint URL for the accounting application
+    Value: !Sub 'https://${AccountingApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
     Export:
-      Name: !Sub "${AWS::StackName}-ApiUrl"
-  
-  AccountingApiFunction:
-    Description: "Lambda Function ARN"
+      Name: !Sub '${AWS::StackName}-ApiUrl'
+      
+  ApiId:
+    Description: API Gateway ID
+    Value: !Ref AccountingApi
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiId'
+      
+  FunctionArn:
+    Description: Lambda function ARN
     Value: !GetAtt AccountingApiFunction.Arn
     Export:
-      Name: !Sub "${AWS::StackName}-FunctionArn"
-  
-  AccountingApiFunctionRole:
-    Description: "Lambda Function IAM Role ARN"
-    Value: !GetAtt AccountingApiRole.Arn
+      Name: !Sub '${AWS::StackName}-FunctionArn'
+      
+  FunctionName:
+    Description: Lambda function name
+    Value: !Ref AccountingApiFunction
     Export:
-      Name: !Sub "${AWS::StackName}-FunctionRoleArn" 
+      Name: !Sub '${AWS::StackName}-FunctionName'
+      
+  Environment:
+    Description: Deployment environment
+    Value: !Ref Environment
+    Export:
+      Name: !Sub '${AWS::StackName}-Environment' 

@@ -1,12 +1,8 @@
 """
-Pruebas de integración para Pydantic
+Integration Tests for Pydantic Schemas - Enterprise Edition
 
-Estas pruebas validan:
-- Creación de schemas desde datos válidos
-- Validación de datos inválidos
-- Conversión de modelos de dominio a schemas
-- Manejo de errores de validación
-- Configuración centralizada con Pydantic Settings
+Integration tests verifying Pydantic schema validation and serialization
+with enterprise patterns and comprehensive error testing.
 """
 
 import pytest
@@ -14,267 +10,174 @@ from datetime import datetime, timezone
 from uuid import uuid4
 from pydantic import ValidationError
 
-from domain.models.user import User, UserStatus
-from domain.models.task import Task, TaskStatus
-from application.schemas.user_schema import UserCreate, UserResponse, UserUpdate
-from application.schemas.task_schema import TaskCreate, TaskResponse, TaskUpdate
+from application.schemas.task_schema import (
+    CreateTaskRequest,
+    CreateTaskResponse,
+    TaskListResponse,
+    CompleteTaskRequest,
+    CompleteTaskResponse
+)
+from application.schemas.user_schema import UserResponse, UserListResponse
+from domain.entities.user_entity import UserEntity
+from domain.entities.task_entity import TaskEntity
+from domain.enums.user_status_enum import UserStatusEnum
+from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
 
 
-class TestUserSchemas:
-    """Pruebas para los schemas de User"""
+class TestPydanticSchemaIntegration:
+    """Integration tests for Pydantic schema validation"""
     
-    def test_create_valid_user(self):
-        """Prueba crear un UserCreate válido"""
-        user_data = {
-            "name": "Juan Pérez",
-            "status": UserStatus.ACTIVE
-        }
-        
-        user_create = UserCreate(**user_data)
-        
-        assert user_create.name == "Juan Pérez"
-        assert user_create.status == UserStatus.ACTIVE
-    
-    def test_create_user_with_empty_name(self):
-        """Prueba que se rechace un nombre vacío"""
-        invalid_data = {
-            "name": "",
-            "status": UserStatus.ACTIVE
-        }
-        
-        with pytest.raises(ValidationError) as exc_info:
-            UserCreate(**invalid_data)
-        
-        # Verificar que el error es específico del campo name
-        errors = exc_info.value.errors()
-        assert len(errors) == 1
-        assert errors[0]["loc"][0] == "name"
-        assert "at least 1 character" in str(errors[0]["msg"])
-    
-    def test_create_user_with_short_name(self):
-        """Prueba que se rechace un nombre muy corto"""
-        # Nota: No tenemos validación de longitud mínima para nombre
-        # Esta prueba verifica que un nombre corto sea aceptado
+    def test_create_task_request_validation_success(self):
+        """Test successful task creation request validation"""
+        # Arrange
         valid_data = {
-            "name": "A",  # Nombre corto pero válido
-            "status": UserStatus.ACTIVE
+            "title": "Integration Test Task",
+            "description": "Task for Pydantic integration testing",
+            "user_id": 1
         }
         
-        user = UserCreate(**valid_data)
-        assert user.name == "A"
-        assert user.status == UserStatus.ACTIVE
+        # Act
+        request = CreateTaskRequest(**valid_data)
+        
+        # Assert
+        assert request.title == "Integration Test Task"
+        assert request.description == "Task for Pydantic integration testing"
+        assert request.user_id == 1
     
-    def test_convert_domain_user_to_schema(self):
-        """Prueba convertir un modelo de dominio a schema de respuesta"""
-        # Crear modelo de dominio
-        domain_user = User(
+    def test_create_task_request_validation_failure(self):
+        """Test task creation request validation with invalid data"""
+        # Arrange
+        invalid_data = {
+            "title": "",  # Empty title should fail
+            "description": "Valid description",
+            "user_id": 1
+        }
+        
+        # Act & Assert
+        with pytest.raises(ValidationError) as exc_info:
+            CreateTaskRequest(**invalid_data)
+        
+        # Verify validation error details
+        errors = exc_info.value.errors()
+        assert len(errors) > 0
+        assert any(error["loc"] == ("title",) for error in errors)
+    
+    def test_create_task_response_serialization(self):
+        """Test task response schema serialization"""
+        # Arrange
+        task_entity = TaskEntity(
+            task_id=uuid4(),
+            title="Response Test Task",
+            description="Testing response serialization",
             user_id=1,
-            name="María García",
-            status=UserStatus.ACTIVE
+            status=TaskStatusEnum.PENDING,
+            priority=TaskPriorityEnum.MEDIUM,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         
-        # Convertir a schema de respuesta
-        response_user = UserResponse.model_validate(domain_user)
+        # Act
+        response = CreateTaskResponse.from_entity(task_entity)
         
-        assert response_user.user_id == 1
-        assert response_user.name == "María García"
-        assert response_user.status == UserStatus.ACTIVE
+        # Assert
+        assert str(response.task_id) == str(task_entity.task_id)
+        assert response.title == task_entity.title
+        assert response.description == task_entity.description
+        assert response.user_id == task_entity.user_id
+        assert response.status == task_entity.status.value
+        assert response.priority == task_entity.priority.value
     
-    def test_user_update_partial(self):
-        """Prueba actualización parcial de usuario"""
-        update_data = {
-            "name": "María García Actualizada"
-        }
-        
-        user_update = UserUpdate(**update_data)
-        
-        assert user_update.name == "María García Actualizada"
-        assert user_update.status is None  # Campo no enviado debe ser None
-
-
-class TestTaskSchemas:
-    """Pruebas para los schemas de Task"""
-    
-    def test_create_valid_task(self):
-        """Prueba crear un TaskCreate válido"""
-        task_data = {
-            "title": "Implementar Pydantic",
-            "description": "Integrar validación de datos con Pydantic en la aplicación",
-            "user_id": 1
-        }
-        
-        task_create = TaskCreate(**task_data)
-        
-        assert task_create.title == "Implementar Pydantic"
-        assert task_create.description == "Integrar validación de datos con Pydantic en la aplicación"
-        assert task_create.user_id == 1
-    
-    def test_create_task_with_empty_title(self):
-        """Prueba que se rechace un título vacío"""
-        invalid_task_data = {
-            "title": "   ",  # Solo espacios
-            "description": "Descripción válida",
-            "user_id": 1
-        }
-        
-        with pytest.raises(ValidationError) as exc_info:
-            TaskCreate(**invalid_task_data)
-        
-        errors = exc_info.value.errors()
-        assert len(errors) == 1
-        assert errors[0]["loc"][0] == "title"
-        assert "no puede estar vacío" in str(errors[0]["msg"])
-    
-    def test_create_task_with_invalid_user_id(self):
-        """Prueba que se rechace un user_id inválido"""
-        invalid_task_data = {
-            "title": "Título válido",
-            "description": "Descripción válida",
-            "user_id": 0  # Debe ser mayor que 0
-        }
-        
-        with pytest.raises(ValidationError) as exc_info:
-            TaskCreate(**invalid_task_data)
-        
-        errors = exc_info.value.errors()
-        assert len(errors) == 1
-        assert errors[0]["loc"][0] == "user_id"
-        assert "greater than 0" in str(errors[0]["msg"])
-    
-    def test_convert_domain_task_to_schema(self):
-        """Prueba convertir un modelo de dominio a schema de respuesta"""
-        # Crear modelo de dominio
-        task_id = uuid4()
-        domain_task = Task(
-            task_id=task_id,
-            title="Tarea de prueba",
-            description="Descripción de prueba",
-            user_id=1
+    def test_user_response_serialization(self):
+        """Test user response schema serialization"""
+        # Arrange
+        user_entity = UserEntity(
+            user_id=1,
+            name="Integration Test User",
+            email="test@example.com",
+            status=UserStatusEnum.ACTIVE
         )
         
-        # Convertir a schema de respuesta
-        response_task = TaskResponse.model_validate(domain_task)
+        # Act
+        response = UserResponse.from_entity(user_entity)
         
-        assert response_task.task_id == task_id
-        assert response_task.title == "Tarea de prueba"
-        assert response_task.status == TaskStatus.NEW
-        assert response_task.user_id == 1
-        assert response_task.created_at is not None
-        assert response_task.completed_at is None
+        # Assert
+        assert response.user_id == user_entity.user_id
+        assert response.name == user_entity.name
+        assert response.email == user_entity.email
+        assert response.status == user_entity.status.value
     
-    def test_task_update_partial(self):
-        """Prueba actualización parcial de tarea"""
-        update_data = {
-            "title": "Título actualizado",
-            "status": TaskStatus.IN_PROGRESS
-        }
+    def test_complete_task_response_with_completion_timestamp(self):
+        """Test complete task response includes completion timestamp"""
+        # Arrange
+        completion_time = datetime.now(timezone.utc)
+        task_entity = TaskEntity(
+            task_id=uuid4(),
+            title="Completed Task",
+            description="Task that has been completed",
+            user_id=1,
+            status=TaskStatusEnum.COMPLETED,
+            priority=TaskPriorityEnum.HIGH,
+            created_at=datetime.now(timezone.utc),
+            updated_at=completion_time,
+            completed_at=completion_time
+        )
         
-        task_update = TaskUpdate(**update_data)
+        # Act
+        response = CompleteTaskResponse.from_entity(task_entity)
         
-        assert task_update.title == "Título actualizado"
-        assert task_update.status == TaskStatus.IN_PROGRESS
-        assert task_update.description is None  # Campo no enviado debe ser None
-        assert task_update.user_id is None  # Campo no enviado debe ser None
-
-
-class TestConfiguration:
-    """Pruebas para la configuración con Pydantic Settings"""
+        # Assert
+        assert response.status == TaskStatusEnum.COMPLETED.value
+        assert response.completed_at is not None
+        assert response.completed_at == completion_time
     
-    def test_settings_loading(self):
-        """Prueba que la configuración se cargue correctamente"""
-        from application.config import settings
+    def test_task_list_response_with_multiple_tasks(self):
+        """Test task list response with multiple tasks"""
+        # Arrange
+        tasks = [
+            TaskEntity(
+                task_id=uuid4(),
+                title=f"Task {i}",
+                description=f"Description {i}",
+                user_id=1,
+                status=TaskStatusEnum.PENDING,
+                priority=TaskPriorityEnum.MEDIUM,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
+            ) for i in range(3)
+        ]
         
-        # Verificar configuración general
-        assert settings.environment == "development"
-        assert settings.version == "1.0.0"
+        # Act
+        response = TaskListResponse.from_entities(tasks, user_id=1)
         
-        # Verificar configuración de API
-        assert settings.api.api_host == "0.0.0.0"
-        assert settings.api.api_port == 8000
-        assert settings.api.default_page_size == 20
-        assert settings.api.max_page_size == 100
-        
-        # Verificar configuración de base de datos
-        assert settings.database.database_name == "accounting"
-        assert settings.database.database_user == "admin"
-        assert settings.database.database_password == "admin"
-        assert settings.database.database_port == 3306
-        
-        # Verificar URL de conexión
-        expected_url = "mysql+aiomysql://admin:admin@localhost:3306/accounting"
-        assert settings.database.database_url == expected_url
+        # Assert
+        assert len(response.tasks) == 3
+        assert response.total_count == 3
+        assert response.user_id == 1
+        assert all(task.user_id == 1 for task in response.tasks)
     
-    def test_database_settings_property(self):
-        """Prueba la propiedad database_url"""
-        from application.config import settings
+    def test_schema_json_serialization_compatibility(self):
+        """Test schema JSON serialization for API compatibility"""
+        # Arrange
+        task_entity = TaskEntity(
+            task_id=uuid4(),
+            title="JSON Test Task",
+            description="Testing JSON serialization",
+            user_id=1,
+            status=TaskStatusEnum.IN_PROGRESS,
+            priority=TaskPriorityEnum.URGENT,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
+        )
         
-        url = settings.database.database_url
-        assert "mysql+aiomysql://" in url
-        assert "admin:admin@" in url
-        assert "localhost:3306" in url
-        assert "accounting" in url
-    
-    def test_api_settings_defaults(self):
-        """Prueba los valores por defecto de la configuración de API"""
-        from application.config import settings
+        # Act
+        response = CreateTaskResponse.from_entity(task_entity)
+        json_data = response.model_dump(mode="json")
         
-        # Verificar CORS
-        assert "*" in settings.api.cors_origins
-        assert "*" in settings.api.cors_methods
-        assert "*" in settings.api.cors_headers
-        
-        # Verificar paginación
-        assert settings.api.default_page_size > 0
-        assert settings.api.max_page_size > settings.api.default_page_size
-
-
-class TestSchemaValidation:
-    """Pruebas adicionales de validación de schemas"""
-    
-    def test_user_status_enum_validation(self):
-        """Prueba que se valide correctamente el enum UserStatus"""
-        # Válido
-        user_data = {"name": "Test", "status": UserStatus.ACTIVE}
-        user = UserCreate(**user_data)
-        assert user.status == UserStatus.ACTIVE
-        
-        # Inválido
-        with pytest.raises(ValidationError):
-            UserCreate(**{"name": "Test", "status": "INVALID_STATUS"})
-    
-    def test_task_status_enum_validation(self):
-        """Prueba que se valide correctamente el enum TaskStatus"""
-        # Válido
-        task_data = {
-            "title": "Test",
-            "description": "Test",
-            "user_id": 1
-        }
-        task = TaskCreate(**task_data)
-        # TaskStatus se establece automáticamente como NEW
-        
-        # Probar actualización con status válido
-        update_data = {"status": TaskStatus.IN_PROGRESS}
-        task_update = TaskUpdate(**update_data)
-        assert task_update.status == TaskStatus.IN_PROGRESS
-        
-        # Inválido
-        with pytest.raises(ValidationError):
-            TaskUpdate(**{"status": "INVALID_STATUS"})
-    
-    def test_field_constraints(self):
-        """Prueba las restricciones de campos"""
-        # Nombre muy largo
-        with pytest.raises(ValidationError):
-            UserCreate(**{
-                "name": "A" * 101,  # Más de 100 caracteres
-                "status": UserStatus.ACTIVE
-            })
-        
-        # Descripción muy larga
-        with pytest.raises(ValidationError):
-            TaskCreate(**{
-                "title": "Test",
-                "description": "A" * 1001,  # Más de 1000 caracteres
-                "user_id": 1
-            }) 
+        # Assert
+        assert isinstance(json_data, dict)
+        assert "task_id" in json_data
+        assert "title" in json_data
+        assert "status" in json_data
+        assert "priority" in json_data
+        assert json_data["status"] == TaskStatusEnum.IN_PROGRESS.value
+        assert json_data["priority"] == TaskPriorityEnum.URGENT.value 

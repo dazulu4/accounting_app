@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     environment: str = Field(default="development", description="Entorno de ejecución")
     version: str = Field(default="1.0.0", description="Versión de la aplicación")
     
+    # Configuración de logging para compatibilidad con LoggerConfig
+    log_level: str = Field(default="INFO", description="Nivel de logging principal")
+    debug: bool = Field(default=False, description="Modo debug de la aplicación")
+    
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

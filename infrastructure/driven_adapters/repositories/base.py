@@ -1,17 +1,31 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase
+"""
+Database Base Configuration - Legacy Compatibility
 
-# Configuración MySQL 8 con aiomysql
-DATABASE_URL = "mysql+aiomysql://admin:admin@localhost:3306/accounting"
+This module provides backward compatibility by re-exporting the enterprise
+database configuration from helpers. This maintains existing imports while
+using the centralized enterprise configuration.
 
-engine = create_async_engine(
-    DATABASE_URL, 
-    echo=True,
-    pool_pre_ping=True,
-    pool_recycle=3600
+Note: This is a compatibility layer. New code should import directly from
+infrastructure.helpers.database.connection
+"""
+
+# Re-export enterprise configuration for backward compatibility
+from infrastructure.helpers.database.connection import (
+    Base,
+    DatabaseConnection, 
+    database_connection,
+    get_database_session
 )
-SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
+# Legacy compatibility aliases
+engine = database_connection._engine
+SessionLocal = database_connection.create_session
 
-class Base(DeclarativeBase):
-    pass
+__all__ = [
+    'Base',
+    'engine', 
+    'SessionLocal',
+    'DatabaseConnection',
+    'database_connection',
+    'get_database_session'
+]

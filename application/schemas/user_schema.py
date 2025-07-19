@@ -1,75 +1,211 @@
 """
-Schemas Pydantic para la entidad User
+User Schemas - Enterprise Edition
 
-¿Qué es un Schema Pydantic?
-- Es una clase que define la estructura de datos para validación y serialización
-- Hereda de BaseModel (clase base de Pydantic)
-- Define los campos y sus tipos usando type hints de Python
-- Pydantic validará automáticamente los datos y convertirá tipos si es posible
+Professional Pydantic schemas for user-related data validation and serialization
+with comprehensive validation rules and enterprise patterns.
+
+Key Features:
+- Input validation for API requests
+- Output serialization for API responses
+- Enterprise naming conventions
+- Comprehensive validation rules
+- Factory methods for entity conversion
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
-from domain.models.user import UserStatus
+from typing import List, Optional
+from pydantic import BaseModel, Field, EmailStr, validator
+from datetime import datetime
+
+from domain.enums.user_status_enum import UserStatusEnum
+from domain.entities.user_entity import UserEntity
 
 
-class UserBase(BaseModel):
+class UserResponse(BaseModel):
     """
-    Schema base para User - contiene campos comunes para crear y actualizar
+    User response schema for API outputs
     
-    ¿Qué es BaseModel?
-    - Es la clase base de Pydantic que proporciona toda la funcionalidad
-    - Permite validación automática, serialización JSON, etc.
+    Used for serializing user data in API responses with proper
+    typing and validation for client consumption.
     """
-    name: str = Field(..., description="Nombre del usuario", min_length=1, max_length=100)
-    status: UserStatus = Field(default=UserStatus.ACTIVE, description="Estado del usuario")
-
-
-class UserCreate(UserBase):
-    """
-    Schema para crear un nuevo usuario
+    user_id: int = Field(..., description="Unique user identifier", example=1)
+    name: str = Field(..., description="User full name", example="Juan Pérez")
+    email: str = Field(..., description="User email address", example="juan.perez@company.com")
+    status: str = Field(..., description="User status", example="active")
     
-    ¿Por qué heredar de UserBase?
-    - Reutiliza la lógica común
-    - Puede agregar campos específicos para creación
-    - Mantiene consistencia en la API
-    """
-    pass  # No necesitamos campos adicionales para crear
-
-
-class UserUpdate(BaseModel):
-    """
-    Schema para actualizar un usuario existente
+    @classmethod
+    def from_entity(cls, user: UserEntity) -> 'UserResponse':
+        """
+        Create response from user entity
+        
+        Args:
+            user: User entity to convert
+            
+        Returns:
+            UserResponse instance
+        """
+        return cls(
+            user_id=user.user_id,
+            name=user.name,
+            email=user.email,
+            status=user.status.value
+        )
     
-    ¿Por qué usar Optional?
-    - Permite actualizar solo algunos campos
-    - Los campos no enviados no se modifican
-    - Más flexible para operaciones PATCH
-    """
-    name: Optional[str] = Field(None, description="Nombre del usuario", min_length=1, max_length=100)
-    status: Optional[UserStatus] = Field(None, description="Estado del usuario")
-
-
-class UserResponse(UserBase):
-    """
-    Schema para respuestas de API - incluye el ID del usuario
-    
-    ¿Qué es Field(...)?
-    - Los tres puntos (...) indican que el campo es obligatorio
-    - Field permite agregar metadatos como descripción, validaciones, etc.
-    """
-    user_id: int = Field(..., description="ID único del usuario")
-    
-    model_config = {
-        "from_attributes": True
-    }
+    class Config:
+        """Pydantic configuration"""
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "user_id": 1,
+                "name": "Juan Pérez",
+                "email": "juan.perez@company.com",
+                "status": "active"
+            }
+        }
 
 
 class UserListResponse(BaseModel):
     """
-    Schema para listar usuarios - puede incluir metadatos de paginación
+    User list response schema for API outputs
+    
+    Used for serializing multiple users in API responses with
+    metadata about the collection.
     """
-    users: list[UserResponse] = Field(..., description="Lista de usuarios")
-    total: int = Field(..., description="Total de usuarios")
-    page: int = Field(..., description="Página actual")
-    per_page: int = Field(..., description="Usuarios por página") 
+    users: List[UserResponse] = Field(..., description="List of users")
+    total_count: int = Field(..., description="Total number of users", example=5)
+    active_count: int = Field(..., description="Number of active users", example=4)
+    inactive_count: int = Field(..., description="Number of inactive users", example=1)
+    
+    @classmethod
+    def from_entities(cls, users: List[UserEntity]) -> 'UserListResponse':
+        """
+        Create response from user entities
+        
+        Args:
+            users: List of user entities to convert
+            
+        Returns:
+            UserListResponse instance
+        """
+        user_responses = [UserResponse.from_entity(user) for user in users]
+        active_count = len([user for user in users if user.status == UserStatusEnum.ACTIVE])
+        inactive_count = len(users) - active_count
+        
+        return cls(
+            users=user_responses,
+            total_count=len(users),
+            active_count=active_count,
+            inactive_count=inactive_count
+        )
+    
+    class Config:
+        """Pydantic configuration"""
+        json_schema_extra = {
+            "example": {
+                "users": [
+                    {
+                        "user_id": 1,
+                        "name": "Juan Pérez",
+                        "email": "juan.perez@company.com",
+                        "status": "active"
+                    },
+                    {
+                        "user_id": 2,
+                        "name": "María García",
+                        "email": "maria.garcia@company.com",
+                        "status": "active"
+                    }
+                ],
+                "total_count": 2,
+                "active_count": 2,
+                "inactive_count": 0
+            }
+        }
+
+
+class CreateUserRequest(BaseModel):
+    """
+    Create user request schema for API inputs
+    
+    Used for validating user creation requests with comprehensive
+    validation rules and business constraints.
+    """
+    name: str = Field(
+        ..., 
+        min_length=2, 
+        max_length=100,
+        description="User full name",
+        example="Juan Pérez"
+    )
+    email: EmailStr = Field(
+        ...,
+        description="User email address", 
+        example="juan.perez@company.com"
+    )
+    
+    @validator('name')
+    def validate_name(cls, v):
+        """Validate user name format"""
+        if not v.strip():
+            raise ValueError('Name cannot be empty or whitespace only')
+        
+        if any(char.isdigit() for char in v):
+            raise ValueError('Name cannot contain numbers')
+        
+        return v.strip()
+    
+    class Config:
+        """Pydantic configuration"""
+        json_schema_extra = {
+            "example": {
+                "name": "Juan Pérez",
+                "email": "juan.perez@company.com"
+            }
+        }
+
+
+class UpdateUserStatusRequest(BaseModel):
+    """
+    Update user status request schema for API inputs
+    
+    Used for validating user status change requests with
+    proper status validation.
+    """
+    status: UserStatusEnum = Field(
+        ...,
+        description="New user status",
+        example="active"
+    )
+    
+    class Config:
+        """Pydantic configuration"""
+        use_enum_values = True
+        json_schema_extra = {
+            "example": {
+                "status": "active"
+            }
+        }
+
+
+class UserStatsResponse(BaseModel):
+    """
+    User statistics response schema
+    
+    Used for providing user-related statistics and metrics.
+    """
+    total_users: int = Field(..., description="Total number of users", example=10)
+    active_users: int = Field(..., description="Number of active users", example=8)
+    inactive_users: int = Field(..., description="Number of inactive users", example=2)
+    users_created_today: int = Field(..., description="Users created today", example=2)
+    users_created_this_week: int = Field(..., description="Users created this week", example=5)
+    
+    class Config:
+        """Pydantic configuration"""
+        json_schema_extra = {
+            "example": {
+                "total_users": 10,
+                "active_users": 8,
+                "inactive_users": 2,
+                "users_created_today": 2,
+                "users_created_this_week": 5
+            }
+        } 

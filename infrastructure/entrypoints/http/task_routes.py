@@ -1,11 +1,15 @@
 """
-Rutas HTTP para la gestión de tareas usando Flask
+Task HTTP Routes - Enterprise Edition
 
-Beneficios de usar Flask:
-- Más ligero y rápido
-- Mayor control sobre el manejo de errores
-- Mejor compatibilidad con AWS Lambda
-- Validaciones manuales más flexibles
+This module provides HTTP endpoints for task management using Flask
+with enterprise use cases, structured error handling, and sync operations.
+
+Key Features:
+- Enterprise use cases with Unit of Work pattern
+- Synchronous operations optimized for AWS Lambda
+- Structured error handling and logging
+- Pydantic validation for request/response
+- Strategic logging at endpoint level
 """
 
 from flask import Blueprint, jsonify, request
@@ -13,11 +17,19 @@ from typing import List
 from uuid import UUID
 
 from application.di_container import get_create_task_usecase, get_complete_task_usecase, get_list_tasks_usecase
-from domain.usecases.create_task import CreateTaskUseCase
-from domain.usecases.complete_task import CompleteTaskUseCase
-from domain.usecases.list_tasks_by_user import ListTasksByUserUseCase
+from domain.usecases.create_task_use_case import CreateTaskUseCase
+from domain.usecases.complete_task_use_case import CompleteTaskUseCase
+from domain.usecases.list_tasks_by_user_use_case import ListTasksByUserUseCase
 
-# Importar schemas Pydantic
+# Import enterprise value objects
+from domain.value_objects.task_value_objects import (
+    CreateTaskRequest,
+    CreateTaskResponse,
+    CompleteTaskRequest,
+    CompleteTaskResponse
+)
+
+# Import Pydantic schemas for HTTP layer
 from application.schemas.task_schema import (
     TaskCreate,
     TaskResponse,
@@ -26,102 +38,188 @@ from application.schemas.task_schema import (
 )
 from pydantic import ValidationError
 
-# Crear Blueprint
-blueprint = Blueprint('tasks', __name__)
+# Import enterprise logging and error handling
+from infrastructure.helpers.logger.logger_config import get_logger
+from infrastructure.helpers.middleware.http_middleware import log_endpoint_access, require_json
+from infrastructure.helpers.errors.error_handlers import create_validation_error_response
+
+# Configure logger
+logger = get_logger(__name__)
+
+# Create Blueprint
+task_blueprint = Blueprint('tasks', __name__)
 
 
-@blueprint.route("", methods=['POST'])
+@task_blueprint.route("", methods=['POST'])
+@log_endpoint_access('create_task')
+@require_json()
 def create_task():
     """
-    Crea una nueva tarea
+    Create a new task using enterprise use case
     
-    ¿Qué cambia con Flask?
-    - Validación manual de datos de entrada con Pydantic
-    - Manejo manual de errores HTTP
-    - Conversión manual a JSON
+    Returns:
+        JSON response with created task or error
     """
     try:
-        # Obtener datos del request
+        # Get request data
         data = request.get_json()
         if not data:
-            return jsonify({"error": "No se proporcionaron datos JSON"}), 400
+            response_data, status_code = create_validation_error_response(
+                "No JSON data provided"
+            )
+            return jsonify(response_data), status_code
         
-        # Validar datos con Pydantic
+        # Validate data with Pydantic
         try:
             task_create = TaskCreate(**data)
         except ValidationError as e:
-            return jsonify({"error": "Datos inválidos", "details": e.errors()}), 400
+            response_data, status_code = create_validation_error_response(
+                "Invalid data provided",
+                {field: error['msg'] for error in e.errors() for field in [error['loc'][-1]]}
+            )
+            return jsonify(response_data), status_code
         
-        # Obtener caso de uso
+        # Create request value object
+        create_request = CreateTaskRequest(
+            title=task_create.title,
+            description=task_create.description,
+            user_id=task_create.user_id
+        )
+        
+        # Get enterprise use case
         usecase = get_create_task_usecase()
         
-        # Ejecutar caso de uso
-        task = usecase.execute(task_create.title, task_create.description, task_create.user_id)
+        # Execute use case (sync)
+        create_response = usecase.execute(create_request)
         
-        # Convertir a schema de respuesta
-        response_task = TaskResponse.model_validate(task)
+        # Convert to HTTP response schema
+        response_task = TaskResponse.model_validate({
+            "task_id": str(create_response.task_id),
+            "title": create_response.title,
+            "description": create_response.description,
+            "user_id": create_response.user_id,
+            "status": create_response.status,
+            "priority": create_response.priority,
+            "created_at": create_response.created_at.isoformat(),
+            "completed_at": create_response.completed_at.isoformat() if create_response.completed_at else None
+        })
         
-        # Retornar JSON
         return jsonify(response_task.model_dump()), 201
         
-    except ValueError as e:
-        # Errores de lógica de negocio
-        return jsonify({"error": str(e)}), 400
     except Exception as e:
-        # Errores inesperados
-        return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
+        # Let error handling middleware handle exceptions
+        logger.error(
+            "create_task_endpoint_error",
+            error_type=type(e).__name__,
+            error_message=str(e)
+        )
+        raise
 
 
-@blueprint.route("/<int:user_id>", methods=['GET'])
-def list_tasks_by_user(user_id: int):
+@task_blueprint.route("/<task_id>/complete", methods=['PUT'])
+@log_endpoint_access('complete_task')
+@require_json()
+def complete_task(task_id: str):
     """
-    Lista todas las tareas de un usuario específico
+    Complete a task using enterprise use case
     
-    ¿Qué cambia con Flask?
-    - No usa response_model automático
-    - Conversión manual a JSON
-    - Manejo manual de errores
+    Args:
+        task_id: UUID of the task to complete
+        
+    Returns:
+        JSON response with completed task or error
     """
     try:
-        # Obtener caso de uso
-        usecase = get_list_tasks_usecase()
+        # Validate task_id format
+        try:
+            task_uuid = UUID(task_id)
+        except ValueError:
+            response_data, status_code = create_validation_error_response(
+                "Invalid task ID format"
+            )
+            return jsonify(response_data), status_code
         
-        # Ejecutar caso de uso
-        tasks = usecase.execute(user_id)
+        # Create request value object
+        complete_request = CompleteTaskRequest(task_id=task_uuid)
         
-        # Convertir cada tarea a schema de respuesta
-        task_responses = [TaskResponse.model_validate(task) for task in tasks]
-        
-        # Convertir a JSON
-        return jsonify([task.model_dump() for task in task_responses])
-        
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
-
-
-@blueprint.route("/<uuid:task_id>/complete", methods=['PUT'])
-def complete_task(task_id: UUID):
-    """
-    Marca una tarea como completada
-    
-    ¿Qué cambia con Flask?
-    - Manejo manual de UUID en la URL
-    - Validación manual de parámetros
-    - Manejo manual de errores HTTP
-    """
-    try:
-        # Obtener caso de uso
+        # Get enterprise use case
         usecase = get_complete_task_usecase()
         
-        # Ejecutar caso de uso
-        usecase.execute(task_id)
+        # Execute use case (sync)
+        complete_response = usecase.execute(complete_request)
         
-        return jsonify({"message": f"Tarea {task_id} completada exitosamente"})
+        # Convert to HTTP response schema
+        response_task = TaskResponse.model_validate({
+            "task_id": str(complete_response.task_id),
+            "title": complete_response.title,
+            "description": complete_response.description,
+            "user_id": complete_response.user_id,
+            "status": complete_response.status,
+            "priority": complete_response.priority,
+            "created_at": complete_response.created_at.isoformat(),
+            "completed_at": complete_response.completed_at.isoformat() if complete_response.completed_at else None
+        })
         
-    except ValueError as e:
-        # Tarea no encontrada o ya completada
-        return jsonify({"error": str(e)}), 404
+        return jsonify(response_task.model_dump()), 200
+        
     except Exception as e:
-        return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
+        # Let error handling middleware handle exceptions
+        logger.error(
+            "complete_task_endpoint_error",
+            task_id=task_id,
+            error_type=type(e).__name__,
+            error_message=str(e)
+        )
+        raise
+
+
+@task_blueprint.route("/user/<int:user_id>", methods=['GET'])
+@log_endpoint_access('list_tasks_by_user')
+def list_tasks_by_user(user_id: int):
+    """
+    List all tasks for a specific user using enterprise use case
+    
+    Args:
+        user_id: ID of the user
+        
+    Returns:
+        JSON response with user tasks or error
+    """
+    try:
+        # Get enterprise use case
+        usecase = get_list_tasks_usecase()
+        
+        # Execute use case (sync) - assuming it takes user_id parameter
+        tasks_response = usecase.execute(user_id)
+        
+        # Convert to HTTP response schema
+        response_tasks = [
+            TaskResponse.model_validate({
+                "task_id": str(task.task_id),
+                "title": task.title,
+                "description": task.description,
+                "user_id": task.user_id,
+                "status": task.status,
+                "priority": task.priority,
+                "created_at": task.created_at.isoformat(),
+                "completed_at": task.completed_at.isoformat() if task.completed_at else None
+            })
+            for task in tasks_response.tasks
+        ]
+        
+        task_list_response = TaskListResponse(
+            tasks=response_tasks,
+            total_count=len(response_tasks)
+        )
+        
+        return jsonify(task_list_response.model_dump()), 200
+        
+    except Exception as e:
+        # Let error handling middleware handle exceptions
+        logger.error(
+            "list_tasks_by_user_endpoint_error",
+            user_id=user_id,
+            error_type=type(e).__name__,
+            error_message=str(e)
+        )
+        raise

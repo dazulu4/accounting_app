@@ -17,14 +17,15 @@ from datetime import datetime, timezone
 from uuid import UUID
 from unittest.mock import Mock, patch
 
+from application.schemas.task_schema import (
+    CreateTaskRequest,
+    CompleteTaskRequest,
+    TaskResponse,
+    TaskListResponse,
+)
 from domain.usecases.create_task_use_case import CreateTaskUseCase
 from domain.usecases.complete_task_use_case import CompleteTaskUseCase
 from domain.usecases.list_tasks_by_user_use_case import ListTasksByUserUseCase
-from domain.value_objects.task_value_objects import (
-    CreateTaskRequest, 
-    CompleteTaskRequest,
-    ListTasksByUserRequest
-)
 from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
 from domain.exceptions.business_exceptions import (
     UserNotFoundException,
@@ -111,8 +112,7 @@ class TestTaskManagementFlow:
         assert created_task_id is not None
         
         # Act & Assert - Step 2: Verify task in user's list
-        list_request = ListTasksByUserRequest(user_id=sample_user_id)
-        list_response = list_use_case.execute(list_request)
+        list_response = list_use_case.execute(sample_user_id)
         
         assert len(list_response.tasks) == 1
         assert list_response.tasks[0].task_id == created_task_id
@@ -126,7 +126,7 @@ class TestTaskManagementFlow:
         assert complete_response.completed_at is not None
         
         # Act & Assert - Step 4: Verify updated status in list
-        final_list_response = list_use_case.execute(list_request)
+        final_list_response = list_use_case.execute(sample_user_id)
         
         assert len(final_list_response.tasks) == 1
         assert final_list_response.tasks[0].status == TaskStatusEnum.COMPLETED.value
@@ -341,8 +341,7 @@ class TestTaskManagementFlow:
             create_use_case.execute(create_request)
         
         # List all tasks
-        list_request = ListTasksByUserRequest(user_id=sample_user_id)
-        list_response = list_use_case.execute(list_request)
+        list_response = list_use_case.execute(sample_user_id)
         
         performance_timer.stop()
         

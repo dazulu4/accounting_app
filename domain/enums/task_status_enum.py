@@ -35,7 +35,7 @@ class TaskStatusEnum(str, Enum):
     CANCELLED = "cancelled"
     
     @classmethod
-    def get_valid_transitions(cls, current_status: str) -> List[str]:
+    def get_valid_transitions(cls, current_status) -> List[str]:
         """
         Get valid status transitions from the current status
         
@@ -48,14 +48,18 @@ class TaskStatusEnum(str, Enum):
         Raises:
             ValueError: If current_status is not a valid status
         """
-        if current_status not in cls._member_map_:
+        # Handle both enum objects and string values
+        if isinstance(current_status, cls):
+            current_status = current_status.value
+        
+        if current_status not in [member.value for member in cls]:
             raise ValueError(f"Invalid status: {current_status}")
         
         transitions = {
-            cls.PENDING: [cls.IN_PROGRESS, cls.COMPLETED, cls.CANCELLED],
-            cls.IN_PROGRESS: [cls.COMPLETED, cls.CANCELLED],
-            cls.COMPLETED: [],  # Terminal state
-            cls.CANCELLED: []   # Terminal state
+            cls.PENDING.value: [cls.IN_PROGRESS.value, cls.COMPLETED.value, cls.CANCELLED.value],
+            cls.IN_PROGRESS.value: [cls.COMPLETED.value, cls.CANCELLED.value],
+            cls.COMPLETED.value: [],  # Terminal state
+            cls.CANCELLED.value: []   # Terminal state
         }
         
         return transitions.get(current_status, [])

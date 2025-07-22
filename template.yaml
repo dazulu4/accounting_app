@@ -1,258 +1,82 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Enterprise Accounting App - Serverless API with Flask, MySQL and Clean Architecture
-  Professional deployment with environment-specific configuration and secrets management
+  Backend para la Aplicación de Contabilidad
+  Despliega la API Flask como una función AWS Lambda a través de API Gateway.
 
-# =============================================================================
-# PARAMETERS - Environment-specific configuration
-# =============================================================================
-Parameters:
-  Environment:
-    Type: String
-    Default: development
-    AllowedValues:
-      - development
-      - staging
-      - production
-    Description: Deployment environment
-
-  DatabaseHost:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: !Sub '/accounting-app/${Environment}/database/host'
-    Description: Database host from SSM Parameter Store
-    
-  DatabaseName:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: !Sub '/accounting-app/${Environment}/database/name'
-    Description: Database name from SSM Parameter Store
-    
-  DatabaseUsername:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: !Sub '/accounting-app/${Environment}/database/username'
-    Description: Database username from SSM Parameter Store
-    
-  DatabasePasswordSecret:
-    Type: String
-    Default: !Sub 'accounting-app/${Environment}/database/password'
-    Description: Database password secret name in Secrets Manager
-
-  LogLevel:
-    Type: String
-    Default: !If [IsProduction, INFO, DEBUG]
-    AllowedValues:
-      - DEBUG
-      - INFO
-      - WARNING
-      - ERROR
-      - CRITICAL
-    Description: Application logging level
-
-# =============================================================================
-# CONDITIONS - Environment-specific logic
-# =============================================================================
-Conditions:
-  IsProduction: !Equals [!Ref Environment, production]
-  IsStaging: !Equals [!Ref Environment, staging]
-  IsDevelopment: !Equals [!Ref Environment, development]
-  IsNotProduction: !Not [!Equals [!Ref Environment, production]]
-
-# =============================================================================
-# GLOBALS - Shared configuration for all functions
-# =============================================================================
+# ==============================================================================
+# Parámetros Globales
+# ==============================================================================
 Globals:
   Function:
-    Timeout: !If [IsProduction, 30, 60]
-    MemorySize: !If [IsProduction, 1024, 512]
+    Timeout: 30
+    MemorySize: 512
     Runtime: python3.11
     Tracing: Active
-    Environment:
-      Variables:
-        # Application Configuration
-        APP_ENVIRONMENT: !Ref Environment
-        APP_DEBUG: !If [IsProduction, 'false', 'true']
-        APP_VERSION: "2.0.0"
-        
-        # Logging Configuration  
-        LOG_LEVEL: !Ref LogLevel
-        LOG_FORMAT: !If [IsProduction, json, console]
-        
-        # API Configuration
-        API_PREFIX: /api
-        API_VERSION: v1
-        
-        # AWS Configuration
-        AWS_REGION: !Ref AWS::Region
-        LAMBDA_FUNCTION_NAME: !Sub "${AWS::StackName}-api-function"
-        
-    Tags:
-      Project: accounting-app
-      Environment: !Ref Environment
-      ManagedBy: SAM
-      Version: "2.0.0"
+    Handler: application.lambda_handler.handler
+    CodeUri: ./.aws-sam/build/
 
-# =============================================================================
-# RESOURCES - AWS Resources
-# =============================================================================
+# ==============================================================================
+# Recursos de la Aplicación
+# ==============================================================================
 Resources:
   
-  # ==========================================================================
-  # LAMBDA FUNCTION - Main API Handler
-  # ==========================================================================
+  # --- Función Lambda Principal de la API ---
   AccountingApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub 'accounting-app-api-${Environment}'
-      Description: !Sub 'Enterprise Accounting API - ${Environment} Environment'
-      CodeUri: package/
-      Handler: application.lambda_handler.handler
-      
-      # Environment Variables
+      FunctionName: !Sub "${AWS::StackName}-api"
       Environment:
         Variables:
-          # Database Configuration (with Secrets Manager integration)
-          DATABASE_HOST: !Ref DatabaseHost
-          DATABASE_PORT: '3306'
-          DATABASE_NAME: !Ref DatabaseName  
-          DATABASE_USERNAME: !Ref DatabaseUsername
-          DATABASE_PASSWORD: !Sub '{{resolve:secretsmanager:${DatabasePasswordSecret}:SecretString:password}}'
-          DATABASE_CONNECTION_TIMEOUT: '30'
-          DATABASE_POOL_SIZE: !If [IsProduction, '20', '5']
-          DATABASE_ECHO: !If [IsProduction, 'false', 'true']
-          DATABASE_POOL_RECYCLE: '3600'
+          # Estas variables se resuelven durante el despliegue
+          APP_ENVIRONMENT: !Ref AWS::StackName # El nombre del stack define el entorno
+          LOG_LEVEL: "INFO"
+          DATABASE_USERNAME: "admin" # O el usuario que corresponda
+          DATABASE_NAME: "accounting" # O el nombre de la BD que corresponda
           
-      # Performance Configuration
-      ReservedConcurrencyLimit: !If [IsProduction, 100, !If [IsStaging, 50, 10]]
-      
-      # IAM Permissions
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            # Secrets Manager Access
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${DatabasePasswordSecret}*'
-            
-            # SSM Parameter Store Access
-            - Effect: Allow
-              Action:
-                - ssm:GetParameter
-                - ssm:GetParameters
-              Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/accounting-app/${Environment}/*'
-            
-            # CloudWatch Logs
-            - Effect: Allow
-              Action:
-                - logs:CreateLogGroup
-                - logs:CreateLogStream
-                - logs:PutLogEvents
-              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*'
-            
-            # X-Ray Tracing
-            - Effect: Allow
-              Action:
-                - xray:PutTraceSegments
-                - xray:PutTelemetryRecords
-              Resource: "*"
-
-      # API Gateway Integration
+          # --- Resolución Segura de Secretos y Parámetros ---
+          DATABASE_HOST: !Sub "{{resolve:ssm:/accounting-app/${AWS::StackName}/database/host}}"
+          DATABASE_PORT: !Sub "{{resolve:ssm:/accounting-app/${AWS::StackName}/database/port}}"
+          DATABASE_PASSWORD: !Sub "{{resolve:secretsmanager:accounting-app/${AWS::StackName}/database/password:SecretString:password}}"
+          
       Events:
-        ApiGateway:
+        ApiGatewayRoot:
           Type: Api
           Properties:
+            Path: /
+            Method: ANY
             RestApiId: !Ref AccountingApi
+        ApiGatewayProxy:
+          Type: Api
+          Properties:
             Path: /{proxy+}
             Method: ANY
-            
-  # ==========================================================================
-  # API GATEWAY - REST API
-  # ==========================================================================
+            RestApiId: !Ref AccountingApi
+
+  # --- API Gateway ---
   AccountingApi:
     Type: AWS::Serverless::Api
     Properties:
-      Name: !Sub 'accounting-app-api-${Environment}'
-      StageName: !Ref Environment
-      Description: !Sub 'Enterprise Accounting API Gateway - ${Environment}'
-      
-      # CORS Configuration
+      Name: !Sub "${AWS::StackName}-api"
+      StageName: api
       Cors:
-        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS,PATCH'"
-        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Request-ID'"
-        AllowOrigin: !If [IsProduction, "'https://app.accounting.com'", "'*'"]
-        AllowCredentials: false
-        MaxAge: "'600'"
-      
-      # Gateway Responses
-      GatewayResponses:
-        DEFAULT_4XX:
-          ResponseTemplates:
-            "application/json": '{"error":{"type":"CLIENT_ERROR","message":"$context.error.message","timestamp":"$context.requestTime","path":"$context.path"}}'
-        DEFAULT_5XX:
-          ResponseTemplates:
-            "application/json": '{"error":{"type":"SERVER_ERROR","message":"Internal server error","timestamp":"$context.requestTime","path":"$context.path"}}'
-      
-      # Access Logging
-      AccessLogSetting:
-        DestinationArn: !Sub '${ApiGatewayLogGroup.Arn}'
-        Format: !Sub |
-          {
-            "requestId": "$context.requestId",
-            "requestTime": "$context.requestTime",
-            "httpMethod": "$context.httpMethod",
-            "path": "$context.path",
-            "status": "$context.status",
-            "responseLength": "$context.responseLength",
-            "responseTime": "$context.responseTime",
-            "userAgent": "$context.identity.userAgent",
-            "sourceIp": "$context.identity.sourceIp"
-          }
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
 
-  # ==========================================================================
-  # CLOUDWATCH LOG GROUPS
-  # ==========================================================================
-  ApiGatewayLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub '/aws/apigateway/accounting-app-${Environment}'
-      RetentionInDays: !If [IsProduction, 30, 7]
-
-  LambdaLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub '/aws/lambda/accounting-app-api-${Environment}'
-      RetentionInDays: !If [IsProduction, 30, 7]
-
-# =============================================================================
-# OUTPUTS - Stack outputs for reference
-# =============================================================================
+# ==============================================================================
+# Salidas del Stack (Outputs)
+# ==============================================================================
 Outputs:
+
   ApiUrl:
-    Description: API Gateway endpoint URL for the accounting application
-    Value: !Sub 'https://${AccountingApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Description: "URL del API Gateway para la aplicación"
+    Value: !Sub "https://${AccountingApi}.execute-api.${AWS::Region}.amazonaws.com/api"
     Export:
-      Name: !Sub '${AWS::StackName}-ApiUrl'
-      
-  ApiId:
-    Description: API Gateway ID
-    Value: !Ref AccountingApi
-    Export:
-      Name: !Sub '${AWS::StackName}-ApiId'
+      Name: !Sub "${AWS::StackName}-ApiUrl"
       
   FunctionArn:
-    Description: Lambda function ARN
+    Description: "ARN de la función Lambda principal"
     Value: !GetAtt AccountingApiFunction.Arn
     Export:
-      Name: !Sub '${AWS::StackName}-FunctionArn'
-      
-  FunctionName:
-    Description: Lambda function name
-    Value: !Ref AccountingApiFunction
-    Export:
-      Name: !Sub '${AWS::StackName}-FunctionName'
-      
-  Environment:
-    Description: Deployment environment
-    Value: !Ref Environment
-    Export:
-      Name: !Sub '${AWS::StackName}-Environment' 
+      Name: !Sub "${AWS::StackName}-FunctionArn" 

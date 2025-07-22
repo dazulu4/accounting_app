@@ -1,74 +1,27 @@
-# =============================================================================
-# SAM Configuration - Professional Multi-Environment Setup
-# =============================================================================
-# 
-# This file contains environment-specific configuration for SAM deployments
-# following enterprise best practices for infrastructure as code.
-#
-# Usage:
-#   sam deploy --config-env development
-#   sam deploy --config-env staging  
-#   sam deploy --config-env production
-# =============================================================================
+# Este archivo contiene los valores por defecto para los comandos de SAM CLI
 
 version = 0.1
 
-# =============================================================================
-# Development Environment
-# =============================================================================
-[development]
-[development.deploy]
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+region = "us-east-1"
+
 [development.deploy.parameters]
 stack_name = "accounting-app-development"
-s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-development"
+s3_bucket = "tu-bucket-de-despliegue-aqui" # ¡IMPORTANTE! Reemplaza esto
 s3_prefix = "accounting-app-development"
 region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = [
-    "Environment=development",
-    "LogLevel=DEBUG"
-]
 confirm_changeset = true
-fail_on_empty_changeset = false
-image_repositories = []
 
-# =============================================================================
-# Staging Environment  
-# =============================================================================
-[staging]
-[staging.deploy]
-[staging.deploy.parameters]
-stack_name = "accounting-app-staging"
-s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-staging"
-s3_prefix = "accounting-app-staging"
-region = "us-east-1"
-capabilities = "CAPABILITY_IAM"
-parameter_overrides = [
-    "Environment=staging",
-    "LogLevel=INFO"
-]
-confirm_changeset = true
-fail_on_empty_changeset = false
-image_repositories = []
-
-# =============================================================================
-# Production Environment
-# =============================================================================
-[production]
-[production.deploy]
 [production.deploy.parameters]
 stack_name = "accounting-app-production"
-s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-production"
+s3_bucket = "tu-bucket-de-despliegue-aqui" # ¡IMPORTANTE! Reemplaza esto
 s3_prefix = "accounting-app-production"
 region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = [
-    "Environment=production",
-    "LogLevel=INFO"
-]
-confirm_changeset = false  # No confirmation needed in production pipeline
-fail_on_empty_changeset = false
-image_repositories = []
+confirm_changeset = true
 
 # =============================================================================
 # Global Build Configuration

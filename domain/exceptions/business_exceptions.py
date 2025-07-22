@@ -144,6 +144,11 @@ class TaskValidationException(ValidationException):
     pass
 
 
+class UserValidationException(ValidationException):
+    """Raised when user data validation fails"""
+    pass
+
+
 # =============================================================================
 # RESOURCE NOT FOUND EXCEPTIONS
 # =============================================================================

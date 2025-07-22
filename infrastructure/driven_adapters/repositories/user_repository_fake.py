@@ -117,40 +117,48 @@ class FakeUserService(UserGateway):
         
         return user
     
-    def get_all_users(self) -> List[UserEntity]:
-        """
-        Get all users in the system
-        
-        Returns:
-            List of all users
-        """
+    def find_all_users(self) -> List[UserEntity]:
+        """Get all users in the system"""
         logger.debug("getting_all_users", total_count=len(self._users))
         return self._users.copy()
     
-    def get_active_users(self) -> List[UserEntity]:
-        """
-        Get all active users
-        
-        Returns:
-            List of active users only
-        """
+    def find_active_users(self) -> List[UserEntity]:
+        """Get all active users"""
         active_users = [user for user in self._users if user.status == UserStatusEnum.ACTIVE]
         logger.debug("getting_active_users", active_count=len(active_users))
         return active_users
     
-    def get_users_by_status(self, status: UserStatusEnum) -> List[UserEntity]:
-        """
-        Get users by status
-        
-        Args:
-            status: Status to filter by
-            
-        Returns:
-            List of users with specified status
-        """
+    def find_users_by_status(self, status: UserStatusEnum) -> List[UserEntity]:
+        """Get users by status"""
         filtered_users = [user for user in self._users if user.status == status]
         logger.debug("getting_users_by_status", status=status.value, count=len(filtered_users))
         return filtered_users
+    
+    def save_user(self, user: UserEntity) -> None:
+        """Save or update a user"""
+        existing_user = self.find_user_by_id(user.user_id)
+        if existing_user:
+            self._users.remove(existing_user)
+        self._users.append(user)
+        logger.info("user_saved", user_id=user.user_id, name=user.name)
+
+    def delete_user(self, user_id: int) -> bool:
+        """Delete a user"""
+        user = self.find_user_by_id(user_id)
+        if user:
+            self._users.remove(user)
+            logger.info("user_deleted", user_id=user_id)
+            return True
+        logger.warning("delete_user_failed_not_found", user_id=user_id)
+        return False
+
+    def user_exists(self, user_id: int) -> bool:
+        """Check if a user exists"""
+        return any(user.user_id == user_id for user in self._users)
+
+    def count_users_by_status(self, status: UserStatusEnum) -> int:
+        """Count users by status"""
+        return len([user for user in self._users if user.status == status])
     
     def create_user(self, name: str, email: str) -> UserEntity:
         """

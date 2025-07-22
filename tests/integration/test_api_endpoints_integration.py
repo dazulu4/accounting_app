@@ -19,6 +19,7 @@ from uuid import uuid4
 from unittest.mock import Mock, patch
 
 from application.main import create_app
+from application.container import container # Importar el contenedor
 from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
 from domain.exceptions.business_exceptions import (
     UserNotFoundException,
@@ -26,6 +27,7 @@ from domain.exceptions.business_exceptions import (
     TaskNotFoundException,
     InvalidTaskTransitionException
 )
+from domain.usecases.create_task_use_case import CreateTaskResponse # Importar la respuesta del caso de uso
 
 
 @pytest.mark.integration
@@ -43,7 +45,8 @@ class TestTaskAPIIntegration:
     @pytest.fixture
     def client(self, app):
         """Create test client"""
-        return app.test_client()
+        with app.test_client() as client:
+            yield client
     
     @pytest.fixture
     def api_headers(self):
@@ -69,23 +72,21 @@ class TestTaskAPIIntegration:
             "user_id": 1
         }
         
-        with patch('domain.usecases.create_task_use_case.CreateTaskUseCase') as mock_use_case_class:
-            mock_use_case = Mock()
-            mock_use_case_class.return_value = mock_use_case
-            
-            # Mock successful response
+        # Mock del caso de uso directamente en el contenedor
+        with patch.object(container, 'create_task_use_case') as mock_use_case:
+            # Configurar el mock para que devuelva una respuesta exitosa
             mock_task_id = uuid4()
-            mock_response = Mock()
-            mock_response.task_id = mock_task_id
-            mock_response.title = task_data["title"]
-            mock_response.description = task_data["description"]
-            mock_response.user_id = task_data["user_id"]
-            mock_response.status = TaskStatusEnum.PENDING.value
-            mock_response.priority = TaskPriorityEnum.MEDIUM.value
-            mock_response.created_at = datetime.now(timezone.utc)
-            mock_response.updated_at = datetime.now(timezone.utc)
-            mock_response.completed_at = None
-            
+            mock_response = CreateTaskResponse(
+                task_id=mock_task_id,
+                title=task_data["title"],
+                description=task_data["description"],
+                user_id=task_data["user_id"],
+                status=TaskStatusEnum.PENDING.value,
+                priority=TaskPriorityEnum.MEDIUM.value,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+                completed_at=None
+            )
             mock_use_case.execute.return_value = mock_response
             
             # Act

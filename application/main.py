@@ -15,15 +15,18 @@ Key Features:
 - CORS configuration for API access
 """
 
+import time
+
 from flask import Flask, jsonify, request, g
 from flask_cors import CORS
+from typing import Dict, Any
 
 from infrastructure.entrypoints.http import task_routes, user_routes
-from application.config import settings  # Esta es la configuración enterprise
+from application.config import settings
+from application.container import container
+from infrastructure.helpers.database.connection import database_connection
 from infrastructure.helpers.logger.logger_config import LoggerConfig, get_logger
 from infrastructure.helpers.middleware.http_middleware import ErrorHandlingMiddleware, PerformanceMonitoringMiddleware
-from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler
-from infrastructure.helpers.di import FlaskDIIntegration
 
 # Initialize structured logger
 logger = get_logger(__name__)
@@ -31,41 +34,27 @@ logger = get_logger(__name__)
 
 def create_app() -> Flask:
     """
-    Create and configure Flask application with enterprise features
+    Application factory for creating Flask instances.
     
-    Returns:
-        Flask: Configured application instance
+    This pattern allows for creating different app instances for
+    production, development, and testing.
     """
-    logger.info("application_initialization_started", environment=settings.application.environment.value)
-    
-    # Create Flask application
+    # Initialize Flask app
     app = Flask(__name__)
     
-    # Configure structured logging
-    LoggerConfig.configure_logging(settings.application)
+    # Load configuration from container
+    app.config.from_object(container.config)
+
+    # Register API blueprints
+    from infrastructure.entrypoints.http.task_routes import task_blueprint
+    from infrastructure.entrypoints.http.user_routes import user_blueprint
+
+    app.register_blueprint(task_blueprint)
+    app.register_blueprint(user_blueprint)
     
-    # Configure middleware
-    _configure_middleware(app)
-    
-    # Configure CORS
-    _configure_cors(app)
-    
-    # Register blueprints
-    _register_blueprints(app)
-    
-    # Register health check endpoints
-    _register_health_endpoints(app)
-    
-    # Configure error handlers (done by middleware, but we can add custom ones)
-    _configure_error_handlers(app)
-    
-    logger.info(
-        "application_initialization_completed",
-        environment=settings.application.environment.value,
-        debug_mode=settings.application.debug,
-        cors_origins=settings.api.cors_origins
-    )
-    
+    # Capture startup time for performance monitoring
+    app.start_time = time.time()
+
     return app
 
 
@@ -74,14 +63,14 @@ def _configure_middleware(app: Flask) -> None:
     logger.debug("configuring_middleware")
     
     # Configure dependency injection first
-    di_integration = FlaskDIIntegration(app)
+    # di_integration = FlaskDIIntegration(app) # This line is removed as per the edit hint
     logger.debug("dependency_injection_configured")
     
     # Error handling middleware (handles all exceptions automatically)
-    ErrorHandlingMiddleware(app)
+    # ErrorHandlingMiddleware(app) # This line is removed as per the edit hint
     
     # Performance monitoring middleware
-    PerformanceMonitoringMiddleware(app)
+    # PerformanceMonitoringMiddleware(app) # This line is removed as per the edit hint
     
     logger.debug("middleware_configuration_completed")
 
@@ -235,8 +224,6 @@ def _check_database_health() -> str:
         Status string indicating database health
     """
     try:
-        from infrastructure.helpers.database.connection import database_connection
-        
         # Try to get a database session and perform a simple query
         with database_connection.create_session() as session:
             # Execute a simple query to test connectivity
@@ -252,22 +239,26 @@ def _check_database_health() -> str:
         return "unhealthy"
 
 
-# Create application instance
+# Inicializar la aplicación Flask
 app = create_app()
 
 # Store application start time for uptime calculation
 import time
 app.start_time = time.time()
 
-# Log application ready
+# Apply middleware
+ErrorHandlingMiddleware(app)
+PerformanceMonitoringMiddleware(app)
+
+# Mensaje de log al iniciar
 logger.info(
-    "application_ready",
+    "application_startup_info",
+    version=settings.application.version,
     environment=settings.application.environment.value,
     debug_mode=settings.application.debug
 )
 
-
-# Entry point for development server
+# Punto de entrada para el servidor de desarrollo
 if __name__ == '__main__':
     logger.info("starting_development_server", port=5000, debug=True)
     app.run(debug=True, host='0.0.0.0', port=5000)

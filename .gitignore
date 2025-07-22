@@ -1,118 +1,78 @@
-# Python
+# =============================================================================
+# Gitignore - Lean & Clean Edition
+# =============================================================================
+# Este archivo excluye los artefactos generados y archivos sensibles que
+# son específicos de ESTE proyecto.
+
+# Archivos de Entorno Local
+# =============================================================================
+.env
+.env.*
+!/.env.example
+
+# Directorios de Planes y Documentos Locales
+# =============================================================================
+/local/
+
+# Artefactos de Python
+# =============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
-# Virtual environments
+# Entornos Virtuales de Python
+# =============================================================================
+.venv/
 venv/
 env/
-ENV/
-env.bak/
-venv.bak/
-.venv/
-.poetry/
 
-# Environment variables
-.env
-.env.local
-.env.development
-.env.test
-.env.production
-*.env
+# Dependencias de Poetry
+# =============================================================================
+.poetry-cache/
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-# Testing
+# Artefactos de Pruebas y Cobertura
+# =============================================================================
 .pytest_cache/
-.coverage
 htmlcov/
-.tox/
-.nox/
+.coverage
 .coverage.*
-.cache
 nosetests.xml
 coverage.xml
 *.cover
-*.py,cover
-.hypothesis/
 
-# Build and deployment artifacts
+# Artefactos de Build y Despliegue de AWS SAM
+# =============================================================================
 .aws-sam/
 package/
-build/
-dist/
+
+# Archivos de Base de Datos Locales
+# =============================================================================
+*.db
+*.sqlite3
+
+# Logs de la Aplicación
+# =============================================================================
 *.log
 logs/
+*.log.*
 
-# Database
-*.sqlite
-*.sqlite3
-*.db
+# Artefactos de Construcción de Python
+# =============================================================================
+build/
+dist/
+*.egg-info/
+*.egg
 
-# OS
+# Archivos del IDE (VSCode)
+# =============================================================================
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Archivos del Sistema Operativo
+# =============================================================================
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
-
-# Temporary files
-*.tmp
-*.temp
-*.bak
-*.backup
-
-# Local development
-local/
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# AWS
-.aws/
-aws-credentials.json
-
-# Docker
-.dockerignore
-Dockerfile.local
-
-# Backup files
-*.orig
-*.rej
-
-# Local configuration files
-config.local.py
-settings.local.py
-
-# Poetry
-poetry.lock
-
-# Alembic
-migration/versions/__pycache__/

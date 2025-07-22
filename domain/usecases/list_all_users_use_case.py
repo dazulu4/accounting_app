@@ -15,8 +15,9 @@ Key Features:
 import logging
 from typing import List, Optional
 
+from domain.entities.user_entity import UserEntity
 from domain.gateways.user_gateway import UserGateway
-from domain.enums.task_status_enum import UserStatusEnum
+from domain.enums.user_status_enum import UserStatusEnum
 from domain.exceptions.business_exceptions import ValidationException
 
 # Configure logger
@@ -47,18 +48,15 @@ class ListAllUsersUseCase:
         """
         self._user_gateway = user_gateway
     
-    def execute(self, status_filter: Optional[UserStatusEnum] = None) -> dict:
+    def execute(self, status_filter: Optional[UserStatusEnum] = None) -> List[UserEntity]:
         """
-        Execute list all users use case
-        
+        Ejecuta el caso de uso para listar todos los usuarios.
+
         Args:
-            status_filter: Optional status to filter users by
-            
+            status_filter: Filtro opcional por estado de usuario.
+
         Returns:
-            Dictionary containing users list and metadata
-            
-        Raises:
-            ValidationException: If parameters are invalid
+            Una lista de entidades de usuario.
         """
         logger.info(
             "list_all_users_started",
@@ -67,40 +65,20 @@ class ListAllUsersUseCase:
             }
         )
         
-        try:
-            # Step 1: Validate input parameters
-            self._validate_parameters(status_filter)
-            
-            # Step 2: Retrieve users based on filter
-            users = self._retrieve_users(status_filter)
-            
-            # Step 3: Calculate statistics
-            stats = self._calculate_user_statistics()
-            
-            # Step 4: Create response
-            response = self._create_response(users, stats, status_filter)
-            
-            logger.info(
-                "list_all_users_completed",
-                extra={
-                    "users_returned": len(users),
-                    "status_filter": status_filter.value if status_filter else "all",
-                    "total_users_in_system": stats["total_users"]
-                }
-            )
-            
-            return response
-            
-        except Exception as e:
-            logger.error(
-                "list_all_users_failed",
-                extra={
-                    "status_filter": status_filter.value if status_filter else "all",
-                    "error_type": type(e).__name__,
-                    "error_message": str(e)
-                }
-            )
-            raise
+        # Obtener usuarios del gateway (repositorio)
+        if status_filter:
+            users = self._user_gateway.find_users_by_status(status_filter)
+        else:
+            users = self._user_gateway.find_all_users()
+        
+        logger.info(
+            "list_all_users_completed",
+            extra={
+                "users_found": len(users)
+            }
+        )
+        
+        return users
     
     def _validate_parameters(self, status_filter: Optional[UserStatusEnum]) -> None:
         """

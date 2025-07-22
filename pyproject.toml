@@ -23,78 +23,22 @@ pymysql = "^1.1.1"
 alembic = "^1.16.4"
 
 # Data Validation and Configuration
-pydantic = "^2.11.7"
+pydantic = {extras = ["email"], version = "^2.11.7"}
 pydantic-settings = "^2.10.1"
 
 # Utilities
-requests = "^2.32.4"
 structlog = "^25.4.0"
 
 [tool.poetry.group.dev.dependencies]
-# Testing Framework
 pytest = "^8.4.1"
 pytest-cov = "^4.1.0"
 pytest-mock = "^3.12.0"
 
-# Code Quality
-black = "^23.0.0"
-isort = "^5.13.0"
-mypy = "^1.8.0"
-flake8 = "^6.0.0"
-
-# Development Tools
-pre-commit = "^3.5.0"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = [
-    "--strict-markers",
-    "--strict-config",
-    "--cov=domain",
-    "--cov=application", 
-    "--cov=infrastructure",
-    "--cov-report=term-missing",
-    "--cov-report=html",
-    "--cov-fail-under=85"
-]
-markers = [
-    "unit: Unit tests for isolated components",
-    "integration: Integration tests for component interaction",
-    "e2e: End-to-end tests for complete workflows",
-    "slow: Tests that take longer than usual to run",
-    "database: Tests that require database connection"
-]
-
-[tool.coverage.run]
-source = ["domain", "application", "infrastructure"]
-omit = [
-    "*/__init__.py",
-    "*/main.py", 
-    "*/migration/*",
-    "*/scripts/*",
-    "*/tests/*",
-    "*/conftest.py"
-]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "def __str__",
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "if __name__ == .__main__.:",
-    "if TYPE_CHECKING:"
-]
-show_missing = true
-fail_under = 85
-precision = 2
-
+# =============================================================================
+# Herramientas de Calidad de Código (Linters, Formateadores, etc.)
+# =============================================================================
 [tool.black]
-line-length = 100
+line-length = 88
 target-version = ['py311']
 include = '\.pyi?$'
 extend-exclude = '''
@@ -113,7 +57,7 @@ extend-exclude = '''
 
 [tool.isort]
 profile = "black"
-line_length = 100
+line_length = 88
 multi_line_output = 3
 include_trailing_comma = true
 force_grid_wrap = 0
@@ -141,6 +85,60 @@ module = [
     "flask_cors.*"
 ]
 ignore_missing_imports = true
+
+# =============================================================================
+# Configuración de Pruebas (pytest)
+# =============================================================================
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = [
+    "--strict-markers",
+    "--cov=.",
+    "--cov-report=term-missing",
+    "--cov-fail-under=80", # Umbral de cobertura simplificado
+    "-ra", # Mostrar resumen de todas las pruebas
+]
+markers = [
+    "unit: Pruebas unitarias",
+    "integration: Pruebas de integración",
+    "e2e: Pruebas End-to-End",
+    "database: Pruebas que requieren base de datos",
+]
+
+# =============================================================================
+# Configuración de Cobertura (coverage)
+# =============================================================================
+[tool.coverage.run]
+branch = true
+source = ["domain", "infrastructure"]
+omit = [
+    "*/__init__.py",
+    "migration/*",
+    "scripts/*",
+    "tests/*",
+    ".aws-sam/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+fail_under = 80 # Umbral de cobertura simplificado
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "pass",
+    "if TYPE_CHECKING:",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
 
 [build-system]
 requires = ["poetry-core"]

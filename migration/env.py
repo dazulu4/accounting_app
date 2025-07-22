@@ -51,10 +51,10 @@ def get_database_url() -> str:
         Database connection URL
     """
     try:
-        # Use enterprise configuration
+        # Usar la configuración centralizada de la aplicación
         db_config = settings.database
         
-        # Build connection URL
+        # Construir la URL de conexión
         database_url = (
             f"mysql+pymysql://{db_config.username}:{db_config.password}"
             f"@{db_config.host}:{db_config.port}/{db_config.name}"
@@ -126,11 +126,11 @@ def run_migrations_online() -> None:
     database_url = get_database_url()
     config.set_main_option("sqlalchemy.url", database_url)
     
-    # Create engine with enterprise configuration
+    # Crear el motor con la configuración de la aplicación
     connectable = create_engine(
         database_url,
         poolclass=pool.NullPool,
-        echo=settings.database.echo if hasattr(settings.database, 'echo') else False,
+        echo=settings.application.debug, # Usar el modo debug de la app
         pool_pre_ping=True,  # Verify connections before use
         pool_recycle=3600,   # Recycle connections after 1 hour
         connect_args={

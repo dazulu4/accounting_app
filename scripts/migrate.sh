@@ -1,335 +1,148 @@
 #!/bin/bash
 # =============================================================================
-# Database Migration Script - Enterprise Edition
+# Gestión de Migraciones de Base de Datos - Edición Simplificada
 # =============================================================================
-# 
-# Professional database migration management for different environments
-# with validation, backup, and rollback capabilities.
 #
-# Features:
-# - Environment-specific migration execution
-# - Database backup before migration
-# - Migration validation and verification
-# - Rollback capabilities
-# - Comprehensive logging
+# Este script unificado maneja todo el ciclo de vida de las migraciones de Alembic.
 #
-# Usage: ./scripts/migrate.sh [command] [environment]
-# Commands: upgrade, downgrade, current, history, backup, validate
-# Example: ./scripts/migrate.sh upgrade production
+# Comandos:
+#   new "<mensaje>" : Crea un nuevo archivo de migración.
+#   upgrade         : Aplica todas las migraciones pendientes.
+#   downgrade       : Revierte la última migración aplicada.
+#   current         : Muestra la versión actual de la migración.
+#   history         : Muestra el historial de migraciones.
+#
+# Uso:
+#   ./scripts/migrate.sh [comando] [argumentos...]
+#
+# Ejemplos:
+#   ./scripts/migrate.sh new "add_user_email_column"
+#   ./scripts/migrate.sh upgrade
+#   ./scripts/migrate.sh downgrade
 # =============================================================================
 
 set -euo pipefail
 
-# =============================================================================
-# Configuration
-# =============================================================================
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-COMMAND="${1:-upgrade}"
-ENVIRONMENT="${2:-development}"
+# --- Configuración ---
+COMMAND="${1:-}"
+export APP_ENVIRONMENT="development" # Por defecto para operaciones de migración
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+# Colores para la salida
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
 
-# =============================================================================
-# Helper Functions
-# =============================================================================
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
-
 log_success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
 show_usage() {
-    echo "Usage: $0 [command] [environment]"
+    echo "Uso: $0 [comando]"
     echo ""
-    echo "Commands:"
-    echo "  upgrade     - Apply pending migrations (default)"
-    echo "  downgrade   - Rollback last migration"
-    echo "  current     - Show current migration version"
-    echo "  history     - Show migration history"
-    echo "  backup      - Create database backup"
-    echo "  validate    - Validate migration environment"
-    echo ""
-    echo "Environments:"
-    echo "  development - Local development database"
-    echo "  staging     - Staging environment database"
-    echo "  production  - Production environment database"
-    echo ""
-    echo "Examples:"
-    echo "  $0 upgrade development"
-    echo "  $0 current production"
-    echo "  $0 backup staging"
+    echo "Comandos disponibles:"
+    echo "  new \"<mensaje>\" : Crea una nueva migración (ej: 'add_users_table')."
+    echo "  upgrade         : Aplica las migraciones pendientes a la base de datos."
+    echo "  downgrade       : Revierte la última migración."
+    echo "  current         : Muestra la revisión actual."
+    echo "  history         : Muestra el historial de revisiones."
+    exit 1
 }
 
-validate_command() {
-    case "$COMMAND" in
-        upgrade|downgrade|current|history|backup|validate|help)
-            log_success "Valid command: $COMMAND"
-            ;;
-        *)
-            log_error "Invalid command: $COMMAND"
-            show_usage
-            exit 1
-            ;;
-    esac
-}
-
-validate_environment() {
-    case "$ENVIRONMENT" in
-        development|staging|production)
-            log_success "Valid environment: $ENVIRONMENT"
-            ;;
-        *)
-            log_error "Invalid environment: $ENVIRONMENT"
-            show_usage
-            exit 1
-            ;;
-    esac
-}
-
-check_requirements() {
-    log_info "Checking migration requirements..."
-    
-    # Check if alembic is available
-    if ! command -v python &> /dev/null; then
-        log_error "Python is not available. Please activate your virtual environment."
+# --- Validación de Prerrequisitos ---
+check_prerequisites() {
+    log_info "Verificando que 'alembic' esté disponible..."
+    if ! poetry run alembic --version &> /dev/null; then
+        log_error "Alembic no está instalado o no se puede ejecutar. Asegúrate de haber ejecutado 'poetry install'."
         exit 1
     fi
-    
-    # Check if migration directory exists
-    if [[ ! -d "$PROJECT_ROOT/migration" ]]; then
-        log_error "Migration directory not found: $PROJECT_ROOT/migration"
-        exit 1
-    fi
-    
-    # Check if alembic.ini exists
-    if [[ ! -f "$PROJECT_ROOT/alembic.ini" ]]; then
-        log_error "Alembic configuration not found: $PROJECT_ROOT/alembic.ini"
-        exit 1
-    fi
-    
-    log_success "All requirements satisfied"
+    log_success "Alembic está listo."
 }
 
-set_environment() {
-    log_info "Setting up environment: $ENVIRONMENT"
-    
-    # Set environment variables based on target environment
-    case "$ENVIRONMENT" in
-        development)
-            export APP_ENVIRONMENT=development
-            export DATABASE_HOST=${DATABASE_HOST:-localhost}
-            export DATABASE_PORT=${DATABASE_PORT:-3306}
-            export DATABASE_NAME=${DATABASE_NAME:-accounting_dev}
-            export DATABASE_USERNAME=${DATABASE_USERNAME:-admin}
-            export DATABASE_PASSWORD=${DATABASE_PASSWORD:-admin123}
-            ;;
-        staging)
-            export APP_ENVIRONMENT=staging
-            # For staging/production, these should come from environment or AWS
-            if [[ -z "${DATABASE_HOST:-}" ]]; then
-                log_error "DATABASE_HOST environment variable required for $ENVIRONMENT"
-                exit 1
-            fi
-            ;;
-        production)
-            export APP_ENVIRONMENT=production
-            # For production, these must come from secure environment
-            if [[ -z "${DATABASE_HOST:-}" ]] || [[ -z "${DATABASE_PASSWORD:-}" ]]; then
-                log_error "DATABASE_HOST and DATABASE_PASSWORD environment variables required for production"
-                exit 1
-            fi
-            ;;
-    esac
-    
-    log_success "Environment configured for $ENVIRONMENT"
-}
-
-create_backup() {
-    log_info "Creating database backup for $ENVIRONMENT..."
-    
-    # Only create backups for staging/production
-    if [[ "$ENVIRONMENT" != "development" ]]; then
-        BACKUP_DIR="$PROJECT_ROOT/backups"
-        mkdir -p "$BACKUP_DIR"
-        
-        TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-        BACKUP_FILE="$BACKUP_DIR/backup_${ENVIRONMENT}_${TIMESTAMP}.sql"
-        
-        # Create database backup
-        mysqldump \
-            -h "${DATABASE_HOST}" \
-            -P "${DATABASE_PORT:-3306}" \
-            -u "${DATABASE_USERNAME}" \
-            -p"${DATABASE_PASSWORD}" \
-            "${DATABASE_NAME}" > "$BACKUP_FILE"
-        
-        log_success "Backup created: $BACKUP_FILE"
+# --- Lógica de Comandos ---
+run_new() {
+    local message="$1"
+    if [ -z "$message" ]; then
+        log_error "El comando 'new' requiere un mensaje para la migración."
+        echo "Ejemplo: $0 new \"add_user_email_column\""
+        exit 1
+    fi
+    log_info "Generando nuevo archivo de migración: '$message'..."
+    if poetry run alembic revision --autogenerate -m "$message"; then
+        log_success "Nuevo archivo de migración generado en el directorio 'migration/versions/'."
     else
-        log_info "Skipping backup for development environment"
+        log_error "Falló la generación de la migración."
+        exit 1
     fi
 }
 
-run_alembic_command() {
-    local alembic_cmd="$1"
-    local description="$2"
-    
-    log_info "$description"
-    
-    cd "$PROJECT_ROOT"
-    
-    case "$alembic_cmd" in
+run_upgrade() {
+    log_info "Aplicando migraciones a la base de datos (upgrade)..."
+    if poetry run alembic upgrade head; then
+        log_success "Migraciones aplicadas exitosamente."
+    else
+        log_error "Falló la aplicación de las migraciones."
+        exit 1
+    fi
+}
+
+run_downgrade() {
+    log_info "Revirtiendo la última migración (downgrade)..."
+    if poetry run alembic downgrade -1; then
+        log_success "Última migración revertida exitosamente."
+    else
+        log_error "Falló la reversión de la migración."
+        exit 1
+    fi
+}
+
+run_current() {
+    log_info "Mostrando la versión actual de la base de datos..."
+    poetry run alembic current
+}
+
+run_history() {
+    log_info "Mostrando el historial de migraciones..."
+    poetry run alembic history --verbose
+}
+
+
+# --- Lógica Principal ---
+main() {
+    if [ -z "$COMMAND" ]; then
+        show_usage
+    fi
+
+    check_prerequisites
+
+    case "$COMMAND" in
+        new)
+            run_new "${2:-}"
+            ;;
         upgrade)
-            python -m alembic upgrade head
+            run_upgrade
             ;;
         downgrade)
-            python -m alembic downgrade -1
+            run_downgrade
             ;;
         current)
-            python -m alembic current
+            run_current
             ;;
         history)
-            python -m alembic history --verbose
+            run_history
             ;;
-        validate)
-            python -m alembic check
+        *)
+            log_error "Comando desconocido: $COMMAND"
+            show_usage
             ;;
-    esac
-    
-    log_success "$description completed"
-}
-
-validate_migration() {
-    log_info "Validating migration state..."
-    
-    # Check current migration version
-    log_info "Current migration version:"
-    run_alembic_command "current" "Checking current version"
-    
-    # Validate migration files
-    log_info "Validating migration files..."
-    if python -c "
-import sys
-sys.path.append('.')
-from migration.env import target_metadata
-print(f'Found {len(target_metadata.tables)} tables in metadata')
-for table_name in target_metadata.tables.keys():
-    print(f'  - {table_name}')
-" 2>/dev/null; then
-        log_success "Migration validation passed"
-    else
-        log_warning "Migration validation had issues (this might be normal if database is not accessible)"
-    fi
-}
-
-# =============================================================================
-# Command Implementations
-# =============================================================================
-cmd_upgrade() {
-    log_info "🚀 Starting database migration upgrade for $ENVIRONMENT..."
-    
-    # Create backup for non-dev environments
-    if [[ "$ENVIRONMENT" != "development" ]]; then
-        create_backup
-    fi
-    
-    # Run migration
-    run_alembic_command "upgrade" "Applying pending migrations"
-    
-    # Validate result
-    validate_migration
-    
-    log_success "✅ Migration upgrade completed successfully!"
-}
-
-cmd_downgrade() {
-    log_warning "⚠️  Starting database migration downgrade for $ENVIRONMENT..."
-    
-    # Extra confirmation for production
-    if [[ "$ENVIRONMENT" == "production" ]]; then
-        echo -n "Are you sure you want to downgrade production database? (yes/no): "
-        read -r CONFIRM
-        if [[ "$CONFIRM" != "yes" ]]; then
-            log_info "Downgrade cancelled by user"
-            exit 0
-        fi
-    fi
-    
-    # Create backup
-    create_backup
-    
-    # Run downgrade
-    run_alembic_command "downgrade" "Rolling back last migration"
-    
-    log_success "✅ Migration downgrade completed!"
-}
-
-cmd_current() {
-    log_info "📍 Current migration status for $ENVIRONMENT:"
-    run_alembic_command "current" "Getting current migration version"
-}
-
-cmd_history() {
-    log_info "📚 Migration history for $ENVIRONMENT:"
-    run_alembic_command "history" "Getting migration history"
-}
-
-cmd_backup() {
-    log_info "💾 Creating database backup for $ENVIRONMENT..."
-    create_backup
-    log_success "✅ Backup completed!"
-}
-
-cmd_validate() {
-    log_info "🔍 Validating migration environment for $ENVIRONMENT..."
-    validate_migration
-    run_alembic_command "validate" "Validating migration state"
-    log_success "✅ Validation completed!"
-}
-
-# =============================================================================
-# Main Execution
-# =============================================================================
-main() {
-    if [[ "$COMMAND" == "help" ]]; then
-        show_usage
-        exit 0
-    fi
-    
-    log_info "🗄️  Database Migration Management - Enterprise Edition"
-    log_info "Command: $COMMAND"
-    log_info "Environment: $ENVIRONMENT"
-    
-    validate_command
-    validate_environment
-    check_requirements
-    set_environment
-    
-    # Execute command
-    case "$COMMAND" in
-        upgrade)    cmd_upgrade ;;
-        downgrade)  cmd_downgrade ;;
-        current)    cmd_current ;;
-        history)    cmd_history ;;
-        backup)     cmd_backup ;;
-        validate)   cmd_validate ;;
     esac
 }
 
-# Execute main function
+# --- Ejecución ---
 main "$@" 

@@ -18,16 +18,16 @@ import asyncio
 from datetime import datetime, timezone
 from uuid import uuid4, UUID
 from typing import Dict, Any, Generator
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 # Import enterprise components
 from application.config import settings
+from application.schemas.task_schema import CreateTaskRequest, CreateTaskResponse
 from domain.entities.task_entity import TaskEntity
 from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
-from domain.value_objects.task_value_objects import CreateTaskRequest, CreateTaskResponse
+from domain.gateways.task_gateway import TaskGateway
+from domain.gateways.user_gateway import UserGateway
 from infrastructure.helpers.database.unit_of_work import UnitOfWork
-from infrastructure.helpers.di import get_configured_container
-from infrastructure.driven_adapters.repositories.user_repository_fake import FakeUserService
 
 
 # =============================================================================
@@ -108,9 +108,18 @@ def sample_task_entity(sample_task_id: UUID, sample_user_id: int) -> TaskEntity:
 @pytest.fixture
 def completed_task_entity(sample_task_entity: TaskEntity) -> TaskEntity:
     """Completed task entity for testing"""
-    task = sample_task_entity.copy()
-    task.status = TaskStatusEnum.COMPLETED
-    task.completed_at = datetime.now(timezone.utc)
+    # Create a new task with completed status
+    task = TaskEntity(
+        task_id=sample_task_entity.task_id,
+        title=sample_task_entity.title,
+        description=sample_task_entity.description,
+        user_id=sample_task_entity.user_id,
+        status=TaskStatusEnum.COMPLETED,
+        priority=sample_task_entity.priority,
+        created_at=sample_task_entity.created_at,
+        completed_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
     return task
 
 
@@ -148,19 +157,15 @@ def create_task_response(sample_task_id: UUID, sample_user_id: int) -> CreateTas
 # =============================================================================
 
 @pytest.fixture
-def mock_user_service():
-    """Mock user service for testing"""
-    mock_service = Mock(spec=FakeUserService)
-    
-    # Configure default behaviors
-    mock_service.find_user_by_id.return_value = Mock(
-        user_id=1,
-        name="Test User",
-        email="test@example.com",
-        is_active=lambda: True
-    )
-    
-    return mock_service
+def mock_user_gateway() -> MagicMock:
+    """Mock user gateway for testing"""
+    return MagicMock(spec=UserGateway)
+
+
+@pytest.fixture
+def mock_task_gateway() -> MagicMock:
+    """Mock task gateway for testing"""
+    return MagicMock(spec=TaskGateway)
 
 
 @pytest.fixture

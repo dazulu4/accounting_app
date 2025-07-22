@@ -123,10 +123,10 @@ class TaskEntity:
     
     def _validate_title(self) -> None:
         """Validate task title"""
-        if not self.title:
+        if not self.title or not self.title.strip():
             raise TaskValidationException(TaskValidationMessages.TITLE_REQUIRED)
         
-        if len(self.title) < TaskConstants.TITLE_MIN_LENGTH:
+        if len(self.title.strip()) < TaskConstants.TITLE_MIN_LENGTH:
             raise TaskValidationException(TaskValidationMessages.TITLE_TOO_SHORT)
         
         if len(self.title) > TaskConstants.TITLE_MAX_LENGTH:
@@ -134,10 +134,10 @@ class TaskEntity:
     
     def _validate_description(self) -> None:
         """Validate task description"""
-        if not self.description:
+        if not self.description or not self.description.strip():
             raise TaskValidationException(TaskValidationMessages.DESCRIPTION_REQUIRED)
         
-        if len(self.description) < TaskConstants.DESCRIPTION_MIN_LENGTH:
+        if len(self.description.strip()) < TaskConstants.DESCRIPTION_MIN_LENGTH:
             raise TaskValidationException(TaskValidationMessages.DESCRIPTION_TOO_SHORT)
         
         if len(self.description) > TaskConstants.DESCRIPTION_MAX_LENGTH:
@@ -163,7 +163,7 @@ class TaskEntity:
         if self.status.is_terminal():
             raise TaskAlreadyCompletedException(TaskValidationMessages.TASK_ALREADY_COMPLETED)
         
-        if not TaskStatusEnum.can_transition_to(self.status, TaskStatusEnum.IN_PROGRESS):
+        if not TaskStatusEnum.can_transition_to(self.status.value, TaskStatusEnum.IN_PROGRESS.value):
             raise TaskStateTransitionException(
                 f"Cannot transition from {self.status} to {TaskStatusEnum.IN_PROGRESS}"
             )
@@ -182,7 +182,7 @@ class TaskEntity:
         if self.status == TaskStatusEnum.COMPLETED:
             raise TaskAlreadyCompletedException(TaskValidationMessages.TASK_ALREADY_COMPLETED)
         
-        if not TaskStatusEnum.can_transition_to(self.status, TaskStatusEnum.COMPLETED):
+        if not TaskStatusEnum.can_transition_to(self.status.value, TaskStatusEnum.COMPLETED.value):
             raise TaskStateTransitionException(
                 f"Cannot transition from {self.status} to {TaskStatusEnum.COMPLETED}"
             )
@@ -202,7 +202,7 @@ class TaskEntity:
         if self.status.is_terminal():
             raise TaskAlreadyCompletedException("Cannot cancel a terminal task")
         
-        if not TaskStatusEnum.can_transition_to(self.status, TaskStatusEnum.CANCELLED):
+        if not TaskStatusEnum.can_transition_to(self.status.value, TaskStatusEnum.CANCELLED.value):
             raise TaskStateTransitionException(
                 f"Cannot transition from {self.status} to {TaskStatusEnum.CANCELLED}"
             )

@@ -19,6 +19,28 @@ cd accounting_app
 poetry install
 ```
 
+## ⚙️ Configuración
+
+La aplicación se configura a través de variables de entorno, siguiendo los principios de 12-Factor App. Para el desarrollo local, puedes crear un archivo `.env` en la raíz del proyecto.
+
+### Archivo `env.example`
+
+Hay un archivo llamado `env.example` en la raíz del proyecto. Cópialo a un nuevo archivo llamado `.env` y ajústalo a tu configuración local.
+
+```bash
+# Ejemplo de cómo copiar el archivo:
+cp env.example .env
+```
+
+### Variables de Entorno para Producción
+
+En producción (AWS Lambda), estas variables deben ser configuradas de forma segura:
+
+-   `APP_ENVIRONMENT`: Se establece en `"production"`.
+-   `APP_DEBUG`: Se establece en `false`.
+-   `LOG_LEVEL`: Se recomienda `"INFO"`.
+-   `DATABASE_*`: Estas variables se inyectan de forma segura a través de **AWS Secrets Manager** y **SSM Parameter Store**. Consulta la guía en `docs/aws/01-parameter-setup.md` para más detalles.
+
 ## 🚀 Ejecutar el servidor
 
 **Opción recomendada (más confiable):**

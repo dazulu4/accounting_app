@@ -22,9 +22,19 @@ from typing import Dict, Any, Optional
 from application.main import create_app
 from application.config import settings
 from infrastructure.helpers.logger.logger_config import get_logger
+from infrastructure.helpers.logger.logger_config import configure_logging
+import structlog.contextvars
 
 # Initialize enterprise logger
 logger = get_logger(__name__)
+
+# Configurar el logging tan pronto como sea posible.
+# Esto asegura que todos los logs, incluso los de inicialización,
+# tengan el formato correcto.
+configure_logging(
+    log_level=settings.application.log_level,
+    debug_mode=settings.application.debug
+)
 
 # Create Flask application (cached for performance)
 app = create_app()
@@ -44,6 +54,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     start_time = time.time()
     request_id = context.aws_request_id if context else "unknown"
     
+    # Añadir contexto de la invocación de Lambda a los logs
+    structlog.contextvars.bind_contextvars(
+        lambda_request_id=context.aws_request_id,
+        function_name=context.function_name,
+        function_version=context.function_version,
+        app_environment=settings.application.environment.value,
+    )
+
     # Initialize request context
     logger.info(
         "lambda_request_started",

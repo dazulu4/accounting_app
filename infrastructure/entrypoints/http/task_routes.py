@@ -24,6 +24,7 @@ from domain.exceptions.business_exceptions import (
     InvalidTaskTransitionException,
     TaskAlreadyCompletedException
 )
+from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler
 
 # Crear un Blueprint para las rutas de tareas
 task_blueprint = Blueprint('tasks', __name__)
@@ -39,10 +40,10 @@ def create_task():
         response_dto = use_case.execute(data)
         
         return jsonify(response_dto.model_dump()), 201
-    except ValidationError as e:
-        return jsonify({"error": {"type": "VALIDATION_ERROR", "message": e.errors()}}), 422
-    except (UserNotFoundException, UserNotActiveException) as e:
-        return jsonify({"error": {"type": type(e).__name__, "message": str(e)}}), 400
+    except Exception as e:
+        # Usar manejo centralizado de errores
+        response_data, status_code = HTTPErrorHandler.handle_exception(e)
+        return jsonify(response_data), status_code
 
 @task_blueprint.route('/tasks/<uuid:task_id>/complete', methods=['PUT'])
 def complete_task(task_id: UUID):
@@ -55,7 +56,7 @@ def complete_task(task_id: UUID):
         response_dto = use_case.execute(request_dto)
         
         return jsonify(response_dto.model_dump()), 200
-    except TaskNotFoundException as e:
-        return jsonify({"error": {"type": "TASK_NOT_FOUND", "message": str(e)}}), 404
-    except (InvalidTaskTransitionException, TaskAlreadyCompletedException) as e:
-        return jsonify({"error": {"type": type(e).__name__, "message": str(e)}}), 409
+    except Exception as e:
+        # Usar manejo centralizado de errores
+        response_data, status_code = HTTPErrorHandler.handle_exception(e)
+        return jsonify(response_data), status_code

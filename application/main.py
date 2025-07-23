@@ -171,6 +171,8 @@ def _configure_error_handlers(app: Flask) -> None:
     """Configure custom error handlers (in addition to middleware)"""
     logger.debug("configuring_custom_error_handlers")
     
+    from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler
+    
     # Custom 404 handler for unmatched routes
     @app.errorhandler(404)
     def handle_not_found(error):
@@ -181,17 +183,9 @@ def _configure_error_handlers(app: Flask) -> None:
             method=request.method
         )
         
-        import time
-        response_data = {
-            "error": {
-                "type": "ENDPOINT_NOT_FOUND",
-                "code": "NOT_FOUND",
-                "message": f"Endpoint '{request.path}' not found",
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                "path": request.path
-            }
-        }
-        return jsonify(response_data), 404
+        # Use centralized error handling
+        response_data, status_code = HTTPErrorHandler.handle_exception(error)
+        return jsonify(response_data), status_code
     
     # Custom 405 handler for method not allowed
     @app.errorhandler(405)
@@ -204,17 +198,9 @@ def _configure_error_handlers(app: Flask) -> None:
             allowed_methods=error.valid_methods if hasattr(error, 'valid_methods') else []
         )
         
-        import time
-        response_data = {
-            "error": {
-                "type": "METHOD_NOT_ALLOWED",
-                "code": "METHOD_NOT_ALLOWED", 
-                "message": f"Method '{request.method}' not allowed for endpoint '{request.path}'",
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                "path": request.path
-            }
-        }
-        return jsonify(response_data), 405
+        # Use centralized error handling
+        response_data, status_code = HTTPErrorHandler.handle_exception(error)
+        return jsonify(response_data), status_code
     
     logger.debug("custom_error_handlers_configured")
 

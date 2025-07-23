@@ -10,11 +10,13 @@ Key Features:
 - Security-conscious error information disclosure
 - Logging integration for error tracking
 - Support for development vs production error details
+- Request ID and context tracking
 """
 
 from datetime import datetime, timezone
 from typing import Dict, Any, Tuple, Type, Optional
 from flask import request, current_app
+import uuid
 
 from domain.exceptions.business_exceptions import (
     BusinessException,
@@ -96,11 +98,16 @@ class HTTPErrorHandler:
     
     @classmethod
     def _handle_business_exception(cls, exception: BusinessException) -> Tuple[Dict[str, Any], int]:
-        """Handle known business exceptions"""
+        """Handle known business exceptions with request context"""
         status_code, error_type = cls.ERROR_MAPPINGS.get(
             type(exception),
             (400, "BUSINESS_ERROR")
         )
+        
+        # Get request context
+        request_id = cls._get_request_id()
+        path = request.path if request else None
+        method = request.method if request else None
         
         response = {
             "error": {
@@ -108,7 +115,9 @@ class HTTPErrorHandler:
                 "code": exception.error_code.value if hasattr(exception, 'error_code') else error_type,
                 "message": str(exception),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "path": request.path if request else None
+                "request_id": request_id,
+                "path": path,
+                "method": method
             }
         }
         
@@ -136,6 +145,11 @@ class HTTPErrorHandler:
         
         status_code, error_type = exception_mapping.get(type(exception), (500, "INTERNAL_ERROR"))
         
+        # Get request context
+        request_id = cls._get_request_id()
+        path = request.path if request else None
+        method = request.method if request else None
+        
         # Create safe error response
         response = {
             "error": {
@@ -143,7 +157,9 @@ class HTTPErrorHandler:
                 "code": error_type,
                 "message": cls._get_safe_error_message(exception, status_code),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "path": request.path if request else None
+                "request_id": request_id,
+                "path": path,
+                "method": method
             }
         }
         
@@ -153,6 +169,21 @@ class HTTPErrorHandler:
             response["error"]["exception_message"] = str(exception)
         
         return response, status_code
+    
+    @classmethod
+    def _get_request_id(cls) -> Optional[str]:
+        """Get or generate request ID"""
+        if not request:
+            return None
+            
+        # Try to get existing request ID
+        if hasattr(request, 'request_id'):
+            return request.request_id
+        
+        # Generate new request ID if not exists
+        request_id = str(uuid.uuid4())
+        request.request_id = request_id
+        return request_id
     
     @classmethod
     def _get_safe_error_message(cls, exception: Exception, status_code: int) -> str:
@@ -186,16 +217,15 @@ class HTTPErrorHandler:
     @classmethod
     def _log_exception(cls, exception: Exception) -> None:
         """Log exception with appropriate level and context"""
+        request_id = cls._get_request_id()
+        
         error_context = {
             "exception_type": type(exception).__name__,
             "exception_message": str(exception),
             "request_path": request.path if request else None,
             "request_method": request.method if request else None,
+            "request_id": request_id,
         }
-        
-        # Add request ID if available
-        if request and hasattr(request, 'request_id'):
-            error_context["request_id"] = request.request_id
         
         # Add user context if available
         if request and hasattr(request, 'user_id'):
@@ -261,13 +291,20 @@ class ErrorResponseBuilder:
         if not self._error_type or not self._message:
             raise ValueError("Error type and message are required")
         
+        # Get request context
+        request_id = HTTPErrorHandler._get_request_id()
+        path = request.path if request else None
+        method = request.method if request else None
+        
         response = {
             "error": {
                 "type": self._error_type,
                 "code": self._error_code or self._error_type,
                 "message": self._message,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "path": request.path if request else None
+                "request_id": request_id,
+                "path": path,
+                "method": method
             }
         }
         

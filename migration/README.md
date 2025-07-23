@@ -21,7 +21,7 @@ Ensure your environment variables are configured:
 ```bash
 # Development (default values)
 export APP_ENVIRONMENT=development
-export DATABASE_HOST=localhost
+export DATABASE_HOST=127.0.0.1
 export DATABASE_PORT=3306
 export DATABASE_NAME=accounting_dev
 export DATABASE_USERNAME=admin

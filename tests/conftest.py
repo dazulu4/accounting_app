@@ -1,13 +1,12 @@
 """
 Test Configuration - Enterprise Edition
 
-Professional test configuration for the testing pyramid with fixtures,
-mocks, and utilities for unit, integration, and E2E tests.
+Professional test configuration for unit testing with fixtures,
+mocks, and utilities for unit tests.
 
 Key Features:
-- Enterprise testing pyramid setup
+- Enterprise testing setup
 - Professional fixtures with proper cleanup
-- Database testing utilities
 - Mock services and dependencies
 - Performance testing support
 - Coverage configuration integration
@@ -37,8 +36,6 @@ from infrastructure.helpers.database.unit_of_work import UnitOfWork
 def pytest_configure(config):
     """Configure pytest with enterprise markers and settings"""
     config.addinivalue_line("markers", "unit: Unit tests (fast, isolated)")
-    config.addinivalue_line("markers", "integration: Integration tests (medium speed)")
-    config.addinivalue_line("markers", "e2e: End-to-end tests (slow, full system)")
     config.addinivalue_line("markers", "database: Tests requiring database")
     config.addinivalue_line("markers", "api: Tests for API endpoints")
     config.addinivalue_line("markers", "performance: Performance and load tests")
@@ -169,6 +166,19 @@ def mock_task_gateway() -> MagicMock:
 
 
 @pytest.fixture
+def mock_user_service() -> MagicMock:
+    """Mock user service for testing"""
+    mock_service = MagicMock()
+    
+    # Configure default behaviors
+    mock_service.get_user_by_id.return_value = None
+    mock_service.get_all_users.return_value = []
+    mock_service.is_user_active.return_value = True
+    
+    return mock_service
+
+
+@pytest.fixture
 def mock_unit_of_work():
     """Mock Unit of Work for testing"""
     mock_uow = Mock(spec=UnitOfWork)
@@ -197,54 +207,6 @@ def mock_task_repository():
     mock_repo.delete_task.return_value = None
     
     return mock_repo
-
-
-# =============================================================================
-# Database Fixtures (for integration tests)
-# =============================================================================
-
-@pytest.fixture(scope="function")
-@pytest.mark.database
-def test_database():
-    """Test database setup and teardown"""
-    # This would set up a test database
-    # For now, we'll use a mock implementation
-    yield {"connection": "test_db"}
-
-
-@pytest.fixture
-@pytest.mark.database
-def test_unit_of_work(test_database):
-    """Real Unit of Work for integration tests"""
-    # This would create a real UoW with test database
-    # For now, return a configured mock
-    return Mock(spec=UnitOfWork)
-
-
-# =============================================================================
-# API Testing Fixtures
-# =============================================================================
-
-@pytest.fixture
-def test_client():
-    """Flask test client for API testing"""
-    from application.main import create_app
-    
-    app = create_app()
-    app.config['TESTING'] = True
-    
-    with app.test_client() as client:
-        with app.app_context():
-            yield client
-
-
-@pytest.fixture
-def api_headers() -> Dict[str, str]:
-    """Standard API headers for testing"""
-    return {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-    }
 
 
 # =============================================================================
@@ -335,10 +297,6 @@ def pytest_collection_modifyitems(config, items):
         # Add markers based on test file location
         if "unit" in str(item.fspath):
             item.add_marker(pytest.mark.unit)
-        elif "integration" in str(item.fspath):
-            item.add_marker(pytest.mark.integration)
-        elif "e2e" in str(item.fspath):
-            item.add_marker(pytest.mark.e2e)
         
         # Add database marker for database-related tests
         if "database" in str(item.fspath) or "repository" in str(item.fspath):

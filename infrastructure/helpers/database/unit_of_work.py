@@ -23,7 +23,6 @@ from sqlalchemy.exc import SQLAlchemyError, TimeoutError, DisconnectionError
 from sqlalchemy import text
 
 from infrastructure.helpers.database.connection import database_connection
-from infrastructure.driven_adapters.repositories.task_repository import TaskRepository
 from domain.constants.task_constants import TransactionConstants
 from domain.entities.task_entity import TaskDomainException
 
@@ -232,7 +231,7 @@ class UnitOfWork:
                 self._task_repository = None
     
     @property
-    def task_repository(self) -> TaskRepository:
+    def task_repository(self):
         """
         Get task repository for current transaction
         
@@ -246,6 +245,7 @@ class UnitOfWork:
             raise UnitOfWorkException("No active transaction")
         
         if self._task_repository is None:
+            from infrastructure.driven_adapters.repositories.task_repository import TaskRepository
             self._task_repository = TaskRepository(self._session)
         
         return self._task_repository

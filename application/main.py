@@ -44,13 +44,16 @@ def create_app() -> Flask:
     
     # Load configuration from container
     app.config.from_object(container.config)
+    
+    # Configure dependency injection container
+    app.container = container
 
     # Register API blueprints
     from infrastructure.entrypoints.http.task_routes import task_blueprint
     from infrastructure.entrypoints.http.user_routes import user_blueprint
 
-    app.register_blueprint(task_blueprint)
-    app.register_blueprint(user_blueprint)
+    app.register_blueprint(task_blueprint, url_prefix='/api')
+    app.register_blueprint(user_blueprint, url_prefix='/api')
     
     # Capture startup time for performance monitoring
     app.start_time = time.time()

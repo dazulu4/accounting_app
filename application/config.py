@@ -13,7 +13,7 @@ Características:
 
 import enum
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, ConfigDict
 
 # Enum para los entornos soportados
 class AppEnvironment(str, enum.Enum):
@@ -23,22 +23,27 @@ class AppEnvironment(str, enum.Enum):
 
 class DatabaseSettings(BaseSettings):
     """Configuración específica para la base de datos."""
-    username: str = Field(..., env="DATABASE_USERNAME")
-    password: str = Field(..., env="DATABASE_PASSWORD")
-    host: str = Field(..., env="DATABASE_HOST")
-    port: int = Field(..., env="DATABASE_PORT")
-    name: str = Field(..., env="DATABASE_NAME")
+    username: str = Field(...)
+    password: str = Field(...)
+    host: str = Field(...)
+    port: int = Field(...)
+    name: str = Field(...)
 
-    class Config:
-        env_prefix = "DB_" # Prefijo para variables de entorno (ej. DB_HOST)
+    model_config = ConfigDict(
+        env_prefix="DATABASE_"
+    )
 
 
 class ApplicationSettings(BaseSettings):
     """Configuración general de la aplicación."""
-    environment: AppEnvironment = Field(AppEnvironment.DEVELOPMENT, env="APP_ENVIRONMENT")
-    debug: bool = Field(False, env="APP_DEBUG")
-    log_level: str = Field("INFO", env="LOG_LEVEL")
+    environment: AppEnvironment = Field(AppEnvironment.DEVELOPMENT)
+    debug: bool = Field(False)
+    log_level: str = Field("INFO")
     version: str = "2.0.0" # Versión de la aplicación
+
+    model_config = ConfigDict(
+        env_prefix="APP_"
+    )
 
 
 class Settings(BaseSettings):
@@ -52,12 +57,13 @@ class Settings(BaseSettings):
     application: ApplicationSettings = Field(default_factory=ApplicationSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
 
-    class Config:
+    model_config = ConfigDict(
         # Configura pydantic-settings para leer un archivo .env
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+        env_file=".env",
+        env_file_encoding="utf-8",
         # Permite anidar configuraciones
-        env_nested_delimiter = '__'
+        env_nested_delimiter='__'
+    )
 
 
 # Instancia global y única de la configuración.

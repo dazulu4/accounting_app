@@ -12,10 +12,11 @@ Key Features:
 - AWS integration ready
 """
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, SecretStr, validator
-from typing import Optional, List
+from typing import List, Optional
 from enum import Enum
+from pydantic import Field, field_validator, ConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic.types import SecretStr
 
 
 class EnvironmentEnum(str, Enum):
@@ -39,28 +40,28 @@ class DatabaseConfig(BaseSettings):
     Database configuration with environment variables support
     
     Environment Variables:
-    - DATABASE_HOST: Database host (default: localhost)
+    - DATABASE_HOST: Database host (default: 127.0.0.1)
     - DATABASE_PORT: Database port (default: 3306)
     - DATABASE_NAME: Database name (default: accounting)
-    - DATABASE_USERNAME: Database username (required)
+    - DATABASE_USER: Database username (required)
     - DATABASE_PASSWORD: Database password (required, secret)
-    - DATABASE_CONNECTION_TIMEOUT: Connection timeout in seconds (default: 30)
-    - DATABASE_POOL_SIZE: Connection pool size (default: 10)
-    - DATABASE_MAX_OVERFLOW: Max pool overflow (default: 20)
-    - DATABASE_ECHO: Show SQL queries in logs (default: false)
     """
     
-    host: str = Field(default="localhost", env="DB_HOST")
-    port: int = Field(default=3306, env="DB_PORT", ge=1, le=65535)
-    name: str = Field(default="accounting", env="DB_NAME", min_length=1)
-    username: str = Field(default="admin", env="DB_USER", min_length=1)
-    password: SecretStr = Field(default="admin", env="DB_PASSWORD", min_length=1)
+    host: str = Field(default="127.0.0.1")
+    port: int = Field(default=3306, ge=1, le=65535)
+    name: str = Field(default="accounting", min_length=1)
+    username: str = Field(default="admin", min_length=1)
+    password: SecretStr = Field(default="admin", min_length=1)
     
     # Connection pool configuration
-    connection_timeout: int = Field(default=30, env="DATABASE_CONNECTION_TIMEOUT", ge=5, le=300)
-    pool_size: int = Field(default=10, env="DATABASE_POOL_SIZE", ge=1, le=50)
-    max_overflow: int = Field(default=20, env="DATABASE_MAX_OVERFLOW", ge=0, le=100)
-    echo: bool = Field(default=False, env="DATABASE_ECHO")
+    connection_timeout: int = Field(default=30, ge=5, le=300)
+    pool_size: int = Field(default=10, ge=1, le=50)
+    max_overflow: int = Field(default=20, ge=0, le=100)
+    echo: bool = Field(default=False)
+
+    model_config = ConfigDict(
+        env_prefix="DATABASE_"
+    )
     
     @property
     def connection_url(self) -> str:
@@ -88,13 +89,17 @@ class ApplicationConfig(BaseSettings):
     - LOG_FORMAT: Log format (json/text, default: json)
     """
     
-    environment: EnvironmentEnum = Field(default=EnvironmentEnum.DEVELOPMENT, env="APP_ENVIRONMENT")
-    debug: bool = Field(default=False, env="APP_DEBUG")
-    version: str = Field(default="1.0.0", env="APP_VERSION")
+    environment: EnvironmentEnum = Field(default=EnvironmentEnum.DEVELOPMENT)
+    debug: bool = Field(default=False)
+    version: str = Field(default="1.0.0")
     
     # Logging configuration
-    log_level: LogLevelEnum = Field(default=LogLevelEnum.INFO, env="LOG_LEVEL")
-    log_format: str = Field(default="json", env="LOG_FORMAT", pattern="^(json|text)$")
+    log_level: LogLevelEnum = Field(default=LogLevelEnum.INFO)
+    log_format: str = Field(default="json", pattern="^(json|text)$")
+
+    model_config = ConfigDict(
+        env_prefix="APP_"
+    )
     
     @property
     def is_development(self) -> bool:
@@ -120,16 +125,20 @@ class APIConfig(BaseSettings):
     - CORS_HEADERS: Allowed CORS headers (comma-separated)
     """
     
-    host: str = Field(default="0.0.0.0", env="API_HOST")
-    port: int = Field(default=8000, env="API_PORT", ge=1, le=65535)
-    prefix: str = Field(default="/api", env="API_PREFIX", pattern="^/.*")
+    host: str = Field(default="0.0.0.0")
+    port: int = Field(default=8000, ge=1, le=65535)
+    prefix: str = Field(default="/api", pattern="^/.*")
     
     # CORS configuration
-    cors_origins: List[str] = Field(default=["*"], env="CORS_ORIGINS")
-    cors_methods: List[str] = Field(default=["GET", "POST", "PUT", "DELETE", "OPTIONS"], env="CORS_METHODS")
-    cors_headers: List[str] = Field(default=["*"], env="CORS_HEADERS")
+    cors_origins: List[str] = Field(default=["*"])
+    cors_methods: List[str] = Field(default=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+    cors_headers: List[str] = Field(default=["*"])
+
+    model_config = ConfigDict(
+        env_prefix="API_"
+    )
     
-    @validator('cors_origins', 'cors_methods', 'cors_headers', pre=True)
+    @field_validator('cors_origins', 'cors_methods', 'cors_headers', mode='before')
     def split_comma_separated(cls, value):
         """Convert comma-separated string to list"""
         if isinstance(value, str):
@@ -149,13 +158,17 @@ class AWSConfig(BaseSettings):
     - LAMBDA_TIMEOUT: Lambda timeout in seconds (optional)
     """
     
-    region: str = Field(default="us-east-1", env="AWS_REGION")
-    account_id: Optional[str] = Field(default=None, env="AWS_ACCOUNT_ID")
+    region: str = Field(default="us-east-1")
+    account_id: Optional[str] = Field(default=None)
     
     # Lambda-specific configuration
-    lambda_function_name: Optional[str] = Field(default=None, env="LAMBDA_FUNCTION_NAME")
-    lambda_memory_size: Optional[int] = Field(default=512, env="LAMBDA_MEMORY_SIZE", ge=128, le=10240)
-    lambda_timeout: Optional[int] = Field(default=30, env="LAMBDA_TIMEOUT", ge=1, le=900)
+    lambda_function_name: Optional[str] = Field(default=None)
+    lambda_memory_size: Optional[int] = Field(default=512, ge=128, le=10240)
+    lambda_timeout: Optional[int] = Field(default=30, ge=1, le=900)
+
+    model_config = ConfigDict(
+        env_prefix="AWS_"
+    )
 
 
 class AppSettings(BaseSettings):

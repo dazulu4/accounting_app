@@ -13,7 +13,7 @@ Key Features:
 """
 
 from typing import List, Optional
-from pydantic import BaseModel, Field, EmailStr, validator
+from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
 from datetime import datetime
 
 from domain.enums.user_status_enum import UserStatusEnum
@@ -27,10 +27,10 @@ class UserResponse(BaseModel):
     Used for serializing user data in API responses with proper
     typing and validation for client consumption.
     """
-    user_id: int = Field(..., description="Unique user identifier", example=1)
-    name: str = Field(..., description="User full name", example="Juan Pérez")
-    email: str = Field(..., description="User email address", example="juan.perez@company.com")
-    status: str = Field(..., description="User status", example="active")
+    user_id: int = Field(..., description="Unique user identifier")
+    name: str = Field(..., description="User full name")
+    email: str = Field(..., description="User email address")
+    status: str = Field(..., description="User status")
     
     @classmethod
     def from_entity(cls, user: UserEntity) -> 'UserResponse':
@@ -50,10 +50,9 @@ class UserResponse(BaseModel):
             status=user.status.value
         )
     
-    class Config:
-        """Pydantic configuration"""
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "user_id": 1,
                 "name": "Juan Pérez",
@@ -61,6 +60,7 @@ class UserResponse(BaseModel):
                 "status": "active"
             }
         }
+    )
 
 
 class UserListResponse(BaseModel):
@@ -71,9 +71,9 @@ class UserListResponse(BaseModel):
     metadata about the collection.
     """
     users: List[UserResponse] = Field(..., description="List of users")
-    total_count: int = Field(..., description="Total number of users", example=5)
-    active_count: int = Field(..., description="Number of active users", example=4)
-    inactive_count: int = Field(..., description="Number of inactive users", example=1)
+    total_count: int = Field(..., description="Total number of users")
+    active_count: int = Field(..., description="Number of active users")
+    inactive_count: int = Field(..., description="Number of inactive users")
     
     @classmethod
     def from_entities(cls, users: List[UserEntity]) -> 'UserListResponse':
@@ -97,9 +97,8 @@ class UserListResponse(BaseModel):
             inactive_count=inactive_count
         )
     
-    class Config:
-        """Pydantic configuration"""
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "users": [
                     {
@@ -120,6 +119,7 @@ class UserListResponse(BaseModel):
                 "inactive_count": 0
             }
         }
+    )
 
 
 class CreateUserRequest(BaseModel):
@@ -133,16 +133,14 @@ class CreateUserRequest(BaseModel):
         ..., 
         min_length=2, 
         max_length=100,
-        description="User full name",
-        example="Juan Pérez"
+        description="User full name"
     )
     email: EmailStr = Field(
         ...,
-        description="User email address", 
-        example="juan.perez@company.com"
+        description="User email address"
     )
     
-    @validator('name')
+    @field_validator('name')
     def validate_name(cls, v):
         """Validate user name format"""
         if not v.strip():
@@ -153,14 +151,14 @@ class CreateUserRequest(BaseModel):
         
         return v.strip()
     
-    class Config:
-        """Pydantic configuration"""
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Juan Pérez",
                 "email": "juan.perez@company.com"
             }
         }
+    )
 
 
 class UpdateUserStatusRequest(BaseModel):
@@ -172,18 +170,17 @@ class UpdateUserStatusRequest(BaseModel):
     """
     status: UserStatusEnum = Field(
         ...,
-        description="New user status",
-        example="active"
+        description="New user status"
     )
     
-    class Config:
-        """Pydantic configuration"""
-        use_enum_values = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        use_enum_values=True,
+        json_schema_extra={
             "example": {
                 "status": "active"
             }
         }
+    )
 
 
 class UserStatsResponse(BaseModel):
@@ -192,15 +189,14 @@ class UserStatsResponse(BaseModel):
     
     Used for providing user-related statistics and metrics.
     """
-    total_users: int = Field(..., description="Total number of users", example=10)
-    active_users: int = Field(..., description="Number of active users", example=8)
-    inactive_users: int = Field(..., description="Number of inactive users", example=2)
-    users_created_today: int = Field(..., description="Users created today", example=2)
-    users_created_this_week: int = Field(..., description="Users created this week", example=5)
+    total_users: int = Field(..., description="Total number of users")
+    active_users: int = Field(..., description="Number of active users")
+    inactive_users: int = Field(..., description="Number of inactive users")
+    users_created_today: int = Field(..., description="Users created today")
+    users_created_this_week: int = Field(..., description="Users created this week")
     
-    class Config:
-        """Pydantic configuration"""
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "total_users": 10,
                 "active_users": 8,
@@ -208,4 +204,5 @@ class UserStatsResponse(BaseModel):
                 "users_created_today": 2,
                 "users_created_this_week": 5
             }
-        } 
+        }
+    ) 

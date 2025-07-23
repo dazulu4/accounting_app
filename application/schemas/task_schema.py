@@ -13,12 +13,11 @@ Key Features:
 """
 
 from typing import List, Optional
-from pydantic import BaseModel, Field, validator
 from datetime import datetime
 from uuid import UUID
-
-from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
+from pydantic import BaseModel, Field, field_validator, ConfigDict, field_serializer
 from domain.entities.task_entity import TaskEntity
+from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
 
 
 class CreateTaskRequest(BaseModel):
@@ -32,46 +31,41 @@ class CreateTaskRequest(BaseModel):
         ..., 
         min_length=1, 
         max_length=200,
-        description="Task title or summary",
-        example="Review monthly accounting records"
+        description="Task title or summary"
     )
     description: str = Field(
         ..., 
         min_length=1, 
         max_length=2000,
-        description="Detailed task description",
-        example="Complete review and reconciliation of all monthly accounting records"
+        description="Detailed task description"
     )
     user_id: int = Field(
         ..., 
         gt=0,
-        description="ID of the user assigned to this task",
-        example=1
+        description="ID of the user assigned to this task"
     )
     priority: Optional[TaskPriorityEnum] = Field(
         default=TaskPriorityEnum.MEDIUM,
-        description="Task priority level",
-        example="medium"
+        description="Task priority level"
     )
     
-    @validator('title')
+    @field_validator('title')
     def validate_title(cls, v):
         """Validate task title"""
         if not v.strip():
             raise ValueError('Title cannot be empty or whitespace only')
         return v.strip()
     
-    @validator('description')
+    @field_validator('description')
     def validate_description(cls, v):
         """Validate task description"""
         if not v.strip():
             raise ValueError('Description cannot be empty or whitespace only')
         return v.strip()
     
-    class Config:
-        """Pydantic configuration"""
-        use_enum_values = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        use_enum_values=True,
+        json_schema_extra={
             "example": {
                 "title": "Review monthly accounting records",
                 "description": "Complete review and reconciliation of all monthly accounting records",
@@ -79,6 +73,7 @@ class CreateTaskRequest(BaseModel):
                 "priority": "medium"
             }
         }
+    )
 
 
 class CreateTaskResponse(BaseModel):
@@ -88,11 +83,11 @@ class CreateTaskResponse(BaseModel):
     Used for serializing newly created task data in API responses.
     """
     task_id: UUID = Field(..., description="Unique task identifier")
-    title: str = Field(..., description="Task title", example="Review monthly accounting records")
+    title: str = Field(..., description="Task title")
     description: str = Field(..., description="Task description")
-    user_id: int = Field(..., description="Assigned user ID", example=1)
-    status: str = Field(..., description="Current task status", example="pending")
-    priority: str = Field(..., description="Task priority", example="medium")
+    user_id: int = Field(..., description="Assigned user ID")
+    status: str = Field(..., description="Current task status")
+    priority: str = Field(..., description="Task priority")
     created_at: datetime = Field(..., description="Task creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     completed_at: Optional[datetime] = Field(None, description="Task completion timestamp")
@@ -120,11 +115,14 @@ class CreateTaskResponse(BaseModel):
             completed_at=task.completed_at
         )
     
-    class Config:
-        """Pydantic configuration"""
-        json_encoders = {
-            datetime: lambda v: v.isoformat() if v else None
-        }
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+    
+    @field_serializer('created_at', 'updated_at', 'completed_at')
+    def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
+        """Serialize datetime fields to ISO format"""
+        return value.isoformat() if value else None
 
 
 class CompleteTaskRequest(BaseModel):
@@ -135,13 +133,13 @@ class CompleteTaskRequest(BaseModel):
     """
     task_id: UUID = Field(..., description="ID of the task to complete")
     
-    class Config:
-        """Pydantic configuration"""
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "task_id": "123e4567-e89b-12d3-a456-426614174000"
             }
         }
+    )
 
 
 class CompleteTaskResponse(BaseModel):
@@ -183,11 +181,14 @@ class CompleteTaskResponse(BaseModel):
             completed_at=task.completed_at
         )
     
-    class Config:
-        """Pydantic configuration"""
-        json_encoders = {
-            datetime: lambda v: v.isoformat() if v else None
-        }
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+    
+    @field_serializer('created_at', 'updated_at', 'completed_at')
+    def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
+        """Serialize datetime fields to ISO format"""
+        return value.isoformat() if value else None
 
 
 class TaskResponse(BaseModel):
@@ -238,10 +239,10 @@ class TaskListResponse(BaseModel):
     metadata about the collection.
     """
     tasks: List[TaskResponse] = Field(..., description="List of tasks")
-    total_count: int = Field(..., description="Total number of tasks", example=5)
-    user_id: int = Field(..., description="User ID these tasks belong to", example=1)
-    pending_count: int = Field(..., description="Number of pending tasks", example=2)
-    completed_count: int = Field(..., description="Number of completed tasks", example=3)
+    total_count: int = Field(..., description="Total number of tasks")
+    user_id: int = Field(..., description="User ID these tasks belong to")
+    pending_count: int = Field(..., description="Number of pending tasks")
+    completed_count: int = Field(..., description="Number of completed tasks")
     
     @classmethod
     def from_entities(cls, tasks: List[TaskEntity], user_id: int) -> 'TaskListResponse':
@@ -267,8 +268,6 @@ class TaskListResponse(BaseModel):
             completed_count=completed_count
         )
     
-    class Config:
-        """Pydantic configuration"""
-        json_encoders = {
-            datetime: lambda v: v.isoformat() if v else None
-        } 
+    model_config = ConfigDict(
+        from_attributes=True
+    ) 

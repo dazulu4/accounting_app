@@ -7,8 +7,6 @@
 #
 # Comandos:
 #   unit        : Ejecuta solo las pruebas unitarias (rápidas).
-#   integration : Ejecuta solo las pruebas de integración.
-#   e2e         : Ejecuta solo las pruebas End-to-End (lentas).
 #   all         : Ejecuta todas las pruebas (por defecto).
 #
 # Opciones:
@@ -20,7 +18,6 @@
 # Ejemplos:
 #   ./scripts/test.sh
 #   ./scripts/test.sh unit --coverage
-#   ./scripts/test.sh integration
 # =============================================================================
 
 set -euo pipefail

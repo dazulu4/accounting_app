@@ -20,7 +20,7 @@ import json
 import time
 from typing import Dict, Any, Optional
 from application.main import create_app
-from application.config import settings
+from application.config.environment import settings
 from infrastructure.helpers.logger.logger_config import get_logger
 from infrastructure.helpers.logger.logger_config import configure_logging
 import structlog.contextvars

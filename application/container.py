@@ -21,7 +21,7 @@ from domain.gateways.user_gateway import UserGateway
 from infrastructure.driven_adapters.repositories.task_repository import TaskRepository
 from infrastructure.driven_adapters.repositories.user_repository_fake import FakeUserService
 from infrastructure.helpers.database.unit_of_work import UnitOfWork
-from application.config import settings
+from application.config.environment import settings
 
 
 class Container:

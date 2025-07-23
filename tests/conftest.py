@@ -20,7 +20,7 @@ from typing import Dict, Any, Generator
 from unittest.mock import Mock, patch, MagicMock
 
 # Import enterprise components
-from application.config import settings
+from application.config.environment import settings
 from application.schemas.task_schema import CreateTaskRequest, CreateTaskResponse
 from domain.entities.task_entity import TaskEntity
 from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum

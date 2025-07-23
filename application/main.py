@@ -22,7 +22,7 @@ from flask_cors import CORS
 from typing import Dict, Any
 
 from infrastructure.entrypoints.http import task_routes, user_routes
-from application.config import settings
+from application.config.environment import settings
 from application.container import container
 from infrastructure.helpers.database.connection import database_connection
 from infrastructure.helpers.logger.logger_config import LoggerConfig, get_logger

@@ -19,7 +19,7 @@ from contextlib import contextmanager
 from typing import Any, Dict, Optional
 from dataclasses import dataclass
 
-from application.config import settings
+from application.config.environment import settings
 
 
 @dataclass

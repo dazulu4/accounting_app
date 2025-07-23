@@ -19,7 +19,7 @@ from sqlalchemy import engine_from_config, pool, create_engine
 from alembic import context
 
 # Import enterprise configuration and models
-from application.config import settings
+from application.config.environment import settings
 from infrastructure.helpers.logger.logger_config import get_logger
 
 # Configure logger

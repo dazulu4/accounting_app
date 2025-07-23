@@ -14,9 +14,10 @@ Key Features:
 
 from typing import List, Optional
 from enum import Enum
-from pydantic import Field, field_validator, ConfigDict
+from pydantic import Field, field_validator, ConfigDict, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic.types import SecretStr
+import re
 
 
 class EnvironmentEnum(str, Enum):
@@ -47,11 +48,31 @@ class DatabaseConfig(BaseSettings):
     - DATABASE_PASSWORD: Database password (required, secret)
     """
     
-    host: str = Field(default="127.0.0.1")
-    port: int = Field(default=3306, ge=1, le=65535)
-    name: str = Field(default="accounting", min_length=1)
-    username: str = Field(default="admin", min_length=1)
-    password: SecretStr = Field(default="admin", min_length=1)
+    host: str = Field(
+        default="127.0.0.1",
+        description="Database host address"
+    )
+    port: int = Field(
+        default=3306, 
+        ge=1, 
+        le=65535,
+        description="Database port number"
+    )
+    name: str = Field(
+        default="accounting", 
+        min_length=1,
+        description="Database name"
+    )
+    username: str = Field(
+        default="admin", 
+        min_length=1,
+        description="Database username"
+    )
+    password: SecretStr = Field(
+        default="admin", 
+        min_length=1,
+        description="Database password"
+    )
     
     # Connection pool configuration
     connection_timeout: int = Field(default=30, ge=5, le=300)
@@ -62,6 +83,46 @@ class DatabaseConfig(BaseSettings):
     model_config = ConfigDict(
         env_prefix="DATABASE_"
     )
+    
+    @field_validator('host')
+    def validate_host(cls, v):
+        """Validate database host"""
+        if not v or not v.strip():
+            raise ValueError("Database host cannot be empty. Please set DATABASE_HOST environment variable.")
+        host = v.strip()
+        # Basic host validation (IP or hostname)
+        if not re.match(r'^[a-zA-Z0-9.-]+$', host) and host != 'localhost':
+            raise ValueError(f"Invalid database host format: {host}. Must be a valid hostname or IP address.")
+        return host
+    
+    @field_validator('name')
+    def validate_database_name(cls, v):
+        """Validate database name"""
+        if not v or not v.strip():
+            raise ValueError("Database name cannot be empty. Please set DATABASE_NAME environment variable.")
+        name = v.strip()
+        if len(name) > 64:  # MySQL limit
+            raise ValueError(f"Database name too long: {name}. Maximum length is 64 characters.")
+        if not re.match(r'^[a-zA-Z0-9_]+$', name):
+            raise ValueError(f"Invalid database name: {name}. Must contain only letters, numbers, and underscores.")
+        return name
+    
+    @field_validator('username')
+    def validate_username(cls, v):
+        """Validate database username"""
+        if not v or not v.strip():
+            raise ValueError("Database username cannot be empty. Please set DATABASE_USER environment variable.")
+        username = v.strip()
+        if len(username) > 32:  # MySQL limit
+            raise ValueError(f"Database username too long: {username}. Maximum length is 32 characters.")
+        return username
+    
+    @field_validator('password')
+    def validate_password(cls, v):
+        """Validate database password"""
+        if not v or not v.get_secret_value().strip():
+            raise ValueError("Database password cannot be empty. Please set DATABASE_PASSWORD environment variable.")
+        return v
     
     @property
     def connection_url(self) -> str:
@@ -89,17 +150,60 @@ class ApplicationConfig(BaseSettings):
     - LOG_FORMAT: Log format (json/text, default: json)
     """
     
-    environment: EnvironmentEnum = Field(default=EnvironmentEnum.DEVELOPMENT)
-    debug: bool = Field(default=False)
-    version: str = Field(default="1.0.0")
+    environment: EnvironmentEnum = Field(
+        default=EnvironmentEnum.DEVELOPMENT,
+        description="Application environment"
+    )
+    debug: bool = Field(
+        default=False,
+        description="Debug mode"
+    )
+    version: str = Field(
+        default="1.0.0",
+        description="Application version"
+    )
     
     # Logging configuration
-    log_level: LogLevelEnum = Field(default=LogLevelEnum.INFO)
-    log_format: str = Field(default="json", pattern="^(json|text)$")
+    log_level: LogLevelEnum = Field(
+        default=LogLevelEnum.INFO,
+        description="Logging level"
+    )
+    log_format: str = Field(
+        default="json", 
+        pattern="^(json|text)$",
+        description="Log format"
+    )
 
     model_config = ConfigDict(
         env_prefix="APP_"
     )
+    
+    @field_validator('environment')
+    def validate_environment(cls, v):
+        """Validate application environment"""
+        if v not in EnvironmentEnum:
+            valid_envs = [env.value for env in EnvironmentEnum]
+            raise ValueError(f"Invalid environment: {v}. Must be one of: {valid_envs}")
+        return v
+    
+    @field_validator('version')
+    def validate_version(cls, v):
+        """Validate version format"""
+        if not v or not v.strip():
+            raise ValueError("Application version cannot be empty. Please set APP_VERSION environment variable.")
+        version = v.strip()
+        # Basic semver validation
+        if not re.match(r'^\d+\.\d+\.\d+', version):
+            raise ValueError(f"Invalid version format: {version}. Must follow semantic versioning (e.g., 1.0.0)")
+        return version
+    
+    @field_validator('log_level')
+    def validate_log_level(cls, v):
+        """Validate log level"""
+        if v not in LogLevelEnum:
+            valid_levels = [level.value for level in LogLevelEnum]
+            raise ValueError(f"Invalid log level: {v}. Must be one of: {valid_levels}")
+        return v
     
     @property
     def is_development(self) -> bool:
@@ -138,6 +242,20 @@ class APIConfig(BaseSettings):
         env_prefix="API_"
     )
     
+    @field_validator('host')
+    def validate_host(cls, v):
+        """Validate API host"""
+        if not v or not v.strip():
+            raise ValueError("API host cannot be empty. Please set API_HOST environment variable.")
+        return v.strip()
+    
+    @field_validator('port')
+    def validate_port(cls, v):
+        """Validate API port"""
+        if v < 1 or v > 65535:
+            raise ValueError(f"Invalid API port: {v}. Must be between 1 and 65535.")
+        return v
+    
     @field_validator('cors_origins', 'cors_methods', 'cors_headers', mode='before')
     def split_comma_separated(cls, value):
         """Convert comma-separated string to list"""
@@ -169,6 +287,17 @@ class AWSConfig(BaseSettings):
     model_config = ConfigDict(
         env_prefix="AWS_"
     )
+    
+    @field_validator('region')
+    def validate_region(cls, v):
+        """Validate AWS region"""
+        if not v or not v.strip():
+            raise ValueError("AWS region cannot be empty. Please set AWS_REGION environment variable.")
+        region = v.strip()
+        # Basic AWS region validation
+        if not re.match(r'^[a-z0-9-]+$', region):
+            raise ValueError(f"Invalid AWS region format: {region}")
+        return region
 
 
 class AppSettings(BaseSettings):
@@ -191,6 +320,33 @@ class AppSettings(BaseSettings):
         extra="ignore",  # Ignore unknown environment variables
         validate_default=True
     )
+    
+    @model_validator(mode='after')
+    def validate_configuration(self):
+        """Validate complete configuration"""
+        errors = []
+        
+        # Validate database configuration
+        if not self.database.username or not self.database.password.get_secret_value():
+            errors.append("Database username and password are required")
+        
+        # Validate application configuration
+        if self.application.environment == EnvironmentEnum.PRODUCTION and self.application.debug:
+            errors.append("Debug mode should not be enabled in production")
+        
+        # Validate API configuration
+        if not self.api.cors_origins:
+            errors.append("CORS origins cannot be empty")
+        
+        # Validate AWS configuration for production
+        if self.application.environment == EnvironmentEnum.PRODUCTION:
+            if not self.aws.region:
+                errors.append("AWS region is required in production")
+        
+        if errors:
+            raise ValueError(f"Configuration validation failed: {'; '.join(errors)}")
+        
+        return self
     
     def get_database_url(self) -> str:
         """Get database connection URL"""

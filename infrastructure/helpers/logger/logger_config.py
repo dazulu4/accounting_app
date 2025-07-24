@@ -27,13 +27,14 @@ from application.config.environment import settings
 class LoggingContext:
     """
     Context manager for logging variables
-    
+
     Allows adding context variables to all logs within a scope.
     """
+
     request_id: Optional[str] = None
     user_id: Optional[str] = None
     operation: Optional[str] = None
-    
+
     def __enter__(self):
         """Enter context and bind variables"""
         if self.request_id:
@@ -43,7 +44,7 @@ class LoggingContext:
         if self.operation:
             structlog.contextvars.bind_contextvars(operation=self.operation)
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit context and clear variables"""
         structlog.contextvars.clear_contextvars()
@@ -52,23 +53,25 @@ class LoggingContext:
 class LoggerConfig:
     """
     Enterprise logging configuration manager
-    
+
     Configures structured logging based on environment settings
     with appropriate processors and formatters.
     """
-    
+
     @staticmethod
     def configure_logging() -> None:
         """
         Configure structured logging for the application
-        
+
         Uses environment variables to determine log level and format:
         - Development: Console output with colors
         - Production: JSON output for log aggregation
         """
         # Determine log level
-        log_level = getattr(logging, settings.application.log_level.upper(), logging.INFO)
-        
+        log_level = getattr(
+            logging, settings.application.log_level.upper(), logging.INFO
+        )
+
         # Configure processors based on environment
         processors = [
             structlog.contextvars.merge_contextvars,
@@ -80,7 +83,7 @@ class LoggerConfig:
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
         ]
-        
+
         # Add appropriate renderer based on environment
         if settings.application.environment == "development":
             # Development: colored console output
@@ -88,7 +91,7 @@ class LoggerConfig:
         else:
             # Production: JSON output
             processors.append(structlog.processors.JSONRenderer())
-        
+
         # Configure structlog
         structlog.configure(
             processors=processors,
@@ -97,69 +100,73 @@ class LoggerConfig:
             context_class=dict,
             cache_logger_on_first_use=True,
         )
-        
+
         # Configure standard library logging
         logging.basicConfig(
             format="%(message)s",
             level=log_level,
             handlers=[logging.StreamHandler()],
         )
-        
+
         # Configure additional loggers
         LoggerConfig._configure_additional_loggers()
-    
+
     @staticmethod
     def _configure_additional_loggers() -> None:
         """Configure additional loggers for specific components"""
         # Configure SQLAlchemy logging for development
         if settings.application.environment == "development":
-            sqlalchemy_logger = logging.getLogger('sqlalchemy.engine')
+            sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
             sqlalchemy_logger.setLevel(logging.INFO)
-        
+
         # Configure performance logger
-        perf_logger = logging.getLogger('performance')
+        perf_logger = logging.getLogger("performance")
         perf_logger.setLevel(logging.INFO)
-        
+
         # Configure security logger
-        security_logger = logging.getLogger('security')
+        security_logger = logging.getLogger("security")
         security_logger.setLevel(logging.WARNING)
-    
+
     @staticmethod
     def get_logger_config() -> Dict[str, Any]:
         """
         Get logging configuration dictionary
-        
+
         Returns:
             Dictionary with logging configuration
         """
         return {
             "log_level": settings.application.log_level,
             "environment": settings.application.environment,
-            "format": "json" if settings.application.environment != "development" else "console"
+            "format": (
+                "json"
+                if settings.application.environment != "development"
+                else "console"
+            ),
         }
 
 
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:
     """
     Get a configured logger instance
-    
+
     Args:
         name: Logger name (typically __name__)
-        
+
     Returns:
         Configured structlog logger
     """
     # Ensure logging is configured
     if not structlog.is_configured():
         LoggerConfig.configure_logging()
-    
+
     return structlog.get_logger(name)
 
 
 def get_request_logger() -> structlog.stdlib.BoundLogger:
     """
     Get a logger specifically for HTTP request logging
-    
+
     Returns:
         Configured structlog logger for request logging
     """
@@ -169,7 +176,7 @@ def get_request_logger() -> structlog.stdlib.BoundLogger:
 def get_performance_logger() -> structlog.stdlib.BoundLogger:
     """
     Get a logger specifically for performance logging
-    
+
     Returns:
         Configured structlog logger for performance logging
     """
@@ -179,7 +186,7 @@ def get_performance_logger() -> structlog.stdlib.BoundLogger:
 def get_security_logger() -> structlog.stdlib.BoundLogger:
     """
     Get a logger specifically for security logging
-    
+
     Returns:
         Configured structlog logger for security logging
     """
@@ -190,17 +197,17 @@ def get_security_logger() -> structlog.stdlib.BoundLogger:
 def logging_context(**kwargs):
     """
     Context manager for temporary logging context
-    
+
     Usage:
         with logging_context(request_id="123", user_id="456"):
             logger.info("This will include context variables")
-    
+
     Args:
         **kwargs: Context variables to bind
     """
     # Bind context variables
     structlog.contextvars.bind_contextvars(**kwargs)
-    
+
     try:
         yield
     finally:
@@ -211,53 +218,50 @@ def logging_context(**kwargs):
 def configure_performance_logging():
     """
     Configure additional performance logging
-    
+
     Sets up specific loggers for performance monitoring
     and database query logging.
     """
     # Configure SQLAlchemy logging for development
     if settings.application.environment == "development":
-        sqlalchemy_logger = logging.getLogger('sqlalchemy.engine')
+        sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
         sqlalchemy_logger.setLevel(logging.INFO)
-    
+
     # Configure performance logger
-    perf_logger = logging.getLogger('performance')
+    perf_logger = logging.getLogger("performance")
     perf_logger.setLevel(logging.INFO)
 
 
 def log_function_call(func_name: str, **kwargs):
     """
     Decorator to log function calls with parameters
-    
+
     Args:
         func_name: Name of the function being called
         **kwargs: Additional context to log
     """
+
     def decorator(func):
         def wrapper(*args, **func_kwargs):
             logger = get_logger(func.__module__)
-            
+
             # Log function entry
             logger.debug(
                 "function_called",
                 function=func_name,
                 args_count=len(args),
                 kwargs_count=len(func_kwargs),
-                **kwargs
+                **kwargs,
             )
-            
+
             try:
                 result = func(*args, **func_kwargs)
-                
+
                 # Log successful completion
-                logger.debug(
-                    "function_completed",
-                    function=func_name,
-                    **kwargs
-                )
-                
+                logger.debug("function_completed", function=func_name, **kwargs)
+
                 return result
-                
+
             except Exception as e:
                 # Log function error
                 logger.error(
@@ -265,18 +269,19 @@ def log_function_call(func_name: str, **kwargs):
                     function=func_name,
                     error_type=type(e).__name__,
                     error_message=str(e),
-                    **kwargs
+                    **kwargs,
                 )
                 raise
-        
+
         return wrapper
+
     return decorator
 
 
 def generate_request_id() -> str:
     """
     Generate a unique request ID for tracing
-    
+
     Returns:
         Unique request ID string
     """
@@ -284,4 +289,4 @@ def generate_request_id() -> str:
 
 
 # Initialize logging on module import
-LoggerConfig.configure_logging() 
+LoggerConfig.configure_logging()

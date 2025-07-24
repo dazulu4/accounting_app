@@ -40,7 +40,7 @@ class TestCreateTaskUseCase:
         mock_task_gateway: MagicMock,
         mock_user_gateway: MagicMock,
         create_task_request: CreateTaskRequest,
-        sample_task_id: UUID
+        sample_task_id: UUID,
     ):
         """Test successful task creation for an active user."""
         # Arrange
@@ -48,13 +48,13 @@ class TestCreateTaskUseCase:
             user_id=1,
             name="Test User",
             email="test@example.com",
-            status=UserStatusEnum.ACTIVE
+            status=UserStatusEnum.ACTIVE,
         )
         mock_user_gateway.find_user_by_id.return_value = active_user
-        
+
         # Mock task count for user
         mock_task_gateway.count_tasks_by_user.return_value = 5
-        
+
         use_case = CreateTaskUseCase(mock_task_gateway, mock_user_gateway)
 
         # Act
@@ -67,18 +67,26 @@ class TestCreateTaskUseCase:
         assert response.user_id == create_task_request.user_id
         assert response.status == "pending"
         # Compare priority values directly
-        expected_priority = create_task_request.priority.value if hasattr(create_task_request.priority, 'value') else create_task_request.priority
+        expected_priority = (
+            create_task_request.priority.value
+            if hasattr(create_task_request.priority, "value")
+            else create_task_request.priority
+        )
         assert response.priority == expected_priority
-        
-        mock_user_gateway.find_user_by_id.assert_called_once_with(create_task_request.user_id)
-        mock_task_gateway.count_tasks_by_user.assert_called_once_with(create_task_request.user_id)
+
+        mock_user_gateway.find_user_by_id.assert_called_once_with(
+            create_task_request.user_id
+        )
+        mock_task_gateway.count_tasks_by_user.assert_called_once_with(
+            create_task_request.user_id
+        )
         mock_task_gateway.save_task.assert_called_once()
 
     def test_execute_should_raise_exception_when_user_not_found(
         self,
         mock_task_gateway: MagicMock,
         mock_user_gateway: MagicMock,
-        create_task_request: CreateTaskRequest
+        create_task_request: CreateTaskRequest,
     ):
         """Test task creation fails when user does not exist."""
         # Arrange
@@ -94,7 +102,7 @@ class TestCreateTaskUseCase:
         self,
         mock_task_gateway: MagicMock,
         mock_user_gateway: MagicMock,
-        create_task_request: CreateTaskRequest
+        create_task_request: CreateTaskRequest,
     ):
         """Test task creation fails for an inactive user."""
         # Arrange
@@ -102,7 +110,7 @@ class TestCreateTaskUseCase:
             user_id=1,
             name="Test User",
             email="test@example.com",
-            status=UserStatusEnum.SUSPENDED
+            status=UserStatusEnum.SUSPENDED,
         )
         mock_user_gateway.find_user_by_id.return_value = inactive_user
         use_case = CreateTaskUseCase(mock_task_gateway, mock_user_gateway)
@@ -116,7 +124,7 @@ class TestCreateTaskUseCase:
         self,
         mock_task_gateway: MagicMock,
         mock_user_gateway: MagicMock,
-        create_task_request: CreateTaskRequest
+        create_task_request: CreateTaskRequest,
     ):
         """Test task creation fails when user has reached task limit."""
         # Arrange
@@ -124,13 +132,13 @@ class TestCreateTaskUseCase:
             user_id=1,
             name="Test User",
             email="test@example.com",
-            status=UserStatusEnum.ACTIVE
+            status=UserStatusEnum.ACTIVE,
         )
         mock_user_gateway.find_user_by_id.return_value = active_user
-        
+
         # Mock 10 existing tasks (max limit)
         mock_task_gateway.count_tasks_by_user.return_value = 10
-        
+
         use_case = CreateTaskUseCase(mock_task_gateway, mock_user_gateway)
 
         # Act & Assert
@@ -142,7 +150,7 @@ class TestCreateTaskUseCase:
         self,
         mock_task_gateway: MagicMock,
         mock_user_gateway: MagicMock,
-        create_task_request: CreateTaskRequest
+        create_task_request: CreateTaskRequest,
     ):
         """Test that task creation is atomic and fails completely on error."""
         # Arrange
@@ -150,14 +158,14 @@ class TestCreateTaskUseCase:
             user_id=1,
             name="Test User",
             email="test@example.com",
-            status=UserStatusEnum.ACTIVE
+            status=UserStatusEnum.ACTIVE,
         )
         mock_user_gateway.find_user_by_id.return_value = active_user
         mock_task_gateway.count_tasks_by_user.return_value = 5
-        
+
         # Mock save to raise exception
         mock_task_gateway.save_task.side_effect = Exception("Database error")
-        
+
         use_case = CreateTaskUseCase(mock_task_gateway, mock_user_gateway)
 
         # Act & Assert
@@ -188,11 +196,11 @@ def create_task_request():
         title="Test Task",
         description="Test Description",
         user_id=1,
-        priority=TaskPriorityEnum.MEDIUM
+        priority=TaskPriorityEnum.MEDIUM,
     )
 
 
 @pytest.fixture
 def sample_task_id():
     """Sample task ID fixture."""
-    return UUID("12345678-1234-5678-1234-567812345678") 
+    return UUID("12345678-1234-5678-1234-567812345678")

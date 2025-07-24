@@ -29,11 +29,17 @@ class TestCreateTaskRequest:
         assert req.title == "New Task"
         assert req.priority == TaskPriorityEnum.HIGH
 
-    @pytest.mark.parametrize("invalid_data, expected_error", [
-        ({"title": " ", "description": "d", "user_id": 1}, "Title cannot be empty"),
-        ({"title": "t", "description": " ", "user_id": 1}, "Description cannot be empty"),
-        ({"title": "t", "description": "d", "user_id": 0}, "greater than 0"),
-    ])
+    @pytest.mark.parametrize(
+        "invalid_data, expected_error",
+        [
+            ({"title": " ", "description": "d", "user_id": 1}, "Title cannot be empty"),
+            (
+                {"title": "t", "description": " ", "user_id": 1},
+                "Description cannot be empty",
+            ),
+            ({"title": "t", "description": "d", "user_id": 0}, "greater than 0"),
+        ],
+    )
     def test_create_task_request_validation_error(self, invalid_data, expected_error):
         """Test validation errors for CreateTaskRequest."""
         with pytest.raises(ValidationError) as exc_info:
@@ -85,4 +91,4 @@ class TestTaskResponseSchemas:
         assert res.total_count == 1
         assert res.user_id == user_id
         assert res.completed_count == 1
-        assert res.pending_count == 0 
+        assert res.pending_count == 0

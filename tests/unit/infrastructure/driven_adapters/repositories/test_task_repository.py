@@ -48,19 +48,23 @@ class TestTaskRepository:
 
     def test_save_task_integrity_error(self, mock_session, task_entity):
         """Test handling of IntegrityError during save."""
-        mock_session.commit.side_effect = IntegrityError("mocked integrity error", [], None)
+        mock_session.commit.side_effect = IntegrityError(
+            "mocked integrity error", [], None
+        )
         repo = TaskRepository(mock_session)
 
         with pytest.raises(TaskDomainException):
             repo.save_task(task_entity)
-        
+
         mock_session.rollback.assert_called_once()
 
     def test_find_task_by_id_found(self, mock_session, task_entity):
         """Test finding a task by ID when it exists."""
         # Create a real TaskModel instead of a mock
-        from infrastructure.driven_adapters.repositories.task_repository import TaskModel
-        
+        from infrastructure.driven_adapters.repositories.task_repository import (
+            TaskModel,
+        )
+
         mock_model = TaskModel(
             task_id=task_entity.task_id,
             title=task_entity.title,
@@ -70,9 +74,9 @@ class TestTaskRepository:
             priority=task_entity.priority.value,
             created_at=task_entity.created_at,
             completed_at=task_entity.completed_at,
-            updated_at=task_entity.updated_at
+            updated_at=task_entity.updated_at,
         )
-        
+
         # Configure the mock to return our real model
         mock_session.get.return_value = mock_model
 
@@ -87,7 +91,7 @@ class TestTaskRepository:
         """Test finding a task by ID when it does not exist."""
         # Configure mock to return None for not found
         mock_session.get.return_value = None
-        
+
         repo = TaskRepository(mock_session)
         result = repo.find_task_by_id(uuid4())
 
@@ -124,8 +128,13 @@ class TestTaskModelMapper:
     def test_model_to_entity_invalid_status(self):
         """Test mapping with an invalid status raises an exception."""
         model = TaskModel(
-            task_id=uuid4(), title="Invalid", description=".", user_id=1,
-            status="INVALID_STATUS", priority="LOW", created_at=datetime.now(timezone.utc)
+            task_id=uuid4(),
+            title="Invalid",
+            description=".",
+            user_id=1,
+            status="INVALID_STATUS",
+            priority="LOW",
+            created_at=datetime.now(timezone.utc),
         )
         with pytest.raises(TaskDomainException):
-            TaskModelMapper.model_to_entity(model) 
+            TaskModelMapper.model_to_entity(model)

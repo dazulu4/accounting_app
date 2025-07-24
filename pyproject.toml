@@ -38,6 +38,10 @@ pytest-mock = "^3.12.0"
 # =============================================================================
 # Herramientas de Calidad de Código (Linters, Formateadores, etc.)
 # =============================================================================
+black = "^25.1.0"
+isort = "^6.0.1"
+mypy = "^1.17.0"
+flake8 = "^7.3.0"
 [tool.black]
 line-length = 88
 target-version = ['py311']
@@ -83,7 +87,8 @@ strict_equality = true
 [[tool.mypy.overrides]]
 module = [
     "pymysql.*",
-    "flask_cors.*"
+    "flask_cors.*",
+    "alembic.*"
 ]
 ignore_missing_imports = true
 
@@ -138,6 +143,22 @@ exclude_lines = [
 [tool.coverage.html]
 directory = "htmlcov"
 
+# =============================================================================
+# Configuración de flake8 (Linter)
+# =============================================================================
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    ".pytest_cache",
+    ".venv",
+    "build",
+    "dist",
+    "migration/versions",
+    ".aws-sam"
+]
 
 [build-system]
 requires = ["poetry-core"]

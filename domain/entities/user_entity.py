@@ -4,6 +4,7 @@ User Entity - Domain Model
 This module contains the core User entity following Domain-Driven Design principles,
 with validation and business logic encapsulated within the entity.
 """
+
 from __future__ import annotations
 import re
 from pydantic import BaseModel, Field, EmailStr, field_validator
@@ -17,12 +18,13 @@ class UserEntity(BaseModel):
     """
     Represents a user in the domain using Pydantic for data validation.
     """
+
     user_id: int = Field(..., gt=0, description="The unique identifier for the user.")
     name: str = Field(..., min_length=1, description="The name of the user.")
     email: EmailStr = Field(..., description="The email address of the user.")
     status: UserStatusEnum = Field(..., description="The current status of the user.")
 
-    @field_validator('name')
+    @field_validator("name")
     @classmethod
     def name_must_not_be_empty(cls, v: str) -> str:
         """Validates that the name is not empty or just whitespace."""
@@ -56,8 +58,9 @@ class UserEntity(BaseModel):
     def change_email(self, new_email: str):
         """Changes the user's email after validation."""
         from pydantic import TypeAdapter, EmailStr, ValidationError
+
         try:
             validated_email = TypeAdapter(EmailStr).validate_python(new_email)
         except ValidationError as e:
             raise ValueError("Invalid email format") from e
-        self.email = validated_email 
+        self.email = validated_email

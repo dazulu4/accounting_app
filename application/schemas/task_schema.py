@@ -23,46 +23,36 @@ from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
 class CreateTaskRequest(BaseModel):
     """
     Create task request schema for API inputs
-    
+
     Used for validating task creation requests with comprehensive
     validation rules and business constraints.
     """
+
     title: str = Field(
-        ..., 
-        min_length=1, 
-        max_length=200,
-        description="Task title or summary"
+        ..., min_length=1, max_length=200, description="Task title or summary"
     )
     description: str = Field(
-        ..., 
-        min_length=1, 
-        max_length=2000,
-        description="Detailed task description"
+        ..., min_length=1, max_length=2000, description="Detailed task description"
     )
-    user_id: int = Field(
-        ..., 
-        gt=0,
-        description="ID of the user assigned to this task"
-    )
+    user_id: int = Field(..., gt=0, description="ID of the user assigned to this task")
     priority: Optional[TaskPriorityEnum] = Field(
-        default=TaskPriorityEnum.MEDIUM,
-        description="Task priority level"
+        default=TaskPriorityEnum.MEDIUM, description="Task priority level"
     )
-    
-    @field_validator('title')
+
+    @field_validator("title")
     def validate_title(cls, v):
         """Validate task title"""
         if not v.strip():
-            raise ValueError('Title cannot be empty or whitespace only')
+            raise ValueError("Title cannot be empty or whitespace only")
         return v.strip()
-    
-    @field_validator('description')
+
+    @field_validator("description")
     def validate_description(cls, v):
         """Validate task description"""
         if not v.strip():
-            raise ValueError('Description cannot be empty or whitespace only')
+            raise ValueError("Description cannot be empty or whitespace only")
         return v.strip()
-    
+
     model_config = ConfigDict(
         use_enum_values=True,
         json_schema_extra={
@@ -70,18 +60,19 @@ class CreateTaskRequest(BaseModel):
                 "title": "Review monthly accounting records",
                 "description": "Complete review and reconciliation of all monthly accounting records",
                 "user_id": 1,
-                "priority": "medium"
+                "priority": "medium",
             }
-        }
+        },
     )
 
 
 class CreateTaskResponse(BaseModel):
     """
     Create task response schema for API outputs
-    
+
     Used for serializing newly created task data in API responses.
     """
+
     task_id: UUID = Field(..., description="Unique task identifier")
     title: str = Field(..., description="Task title")
     description: str = Field(..., description="Task description")
@@ -90,16 +81,18 @@ class CreateTaskResponse(BaseModel):
     priority: str = Field(..., description="Task priority")
     created_at: datetime = Field(..., description="Task creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    completed_at: Optional[datetime] = Field(None, description="Task completion timestamp")
-    
+    completed_at: Optional[datetime] = Field(
+        None, description="Task completion timestamp"
+    )
+
     @classmethod
-    def from_entity(cls, task: TaskEntity) -> 'CreateTaskResponse':
+    def from_entity(cls, task: TaskEntity) -> "CreateTaskResponse":
         """
         Create response from task entity
-        
+
         Args:
             task: Task entity to convert
-            
+
         Returns:
             CreateTaskResponse instance
         """
@@ -112,14 +105,12 @@ class CreateTaskResponse(BaseModel):
             priority=task.priority.value,
             created_at=task.created_at,
             updated_at=task.updated_at,
-            completed_at=task.completed_at
+            completed_at=task.completed_at,
         )
-    
-    model_config = ConfigDict(
-        from_attributes=True
-    )
-    
-    @field_serializer('created_at', 'updated_at', 'completed_at')
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("created_at", "updated_at", "completed_at")
     def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
         """Serialize datetime fields to ISO format"""
         return value.isoformat() if value else None
@@ -128,16 +119,15 @@ class CreateTaskResponse(BaseModel):
 class CompleteTaskRequest(BaseModel):
     """
     Complete task request schema for API inputs
-    
+
     Used for validating task completion requests.
     """
+
     task_id: UUID = Field(..., description="ID of the task to complete")
-    
+
     model_config = ConfigDict(
         json_schema_extra={
-            "example": {
-                "task_id": "123e4567-e89b-12d3-a456-426614174000"
-            }
+            "example": {"task_id": "123e4567-e89b-12d3-a456-426614174000"}
         }
     )
 
@@ -145,9 +135,10 @@ class CompleteTaskRequest(BaseModel):
 class CompleteTaskResponse(BaseModel):
     """
     Complete task response schema for API outputs
-    
+
     Used for serializing completed task data in API responses.
     """
+
     task_id: UUID = Field(..., description="Task identifier")
     title: str = Field(..., description="Task title")
     description: str = Field(..., description="Task description")
@@ -157,15 +148,15 @@ class CompleteTaskResponse(BaseModel):
     created_at: datetime = Field(..., description="Task creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     completed_at: datetime = Field(..., description="Task completion timestamp")
-    
+
     @classmethod
-    def from_entity(cls, task: TaskEntity) -> 'CompleteTaskResponse':
+    def from_entity(cls, task: TaskEntity) -> "CompleteTaskResponse":
         """
         Create response from completed task entity
-        
+
         Args:
             task: Completed task entity to convert
-            
+
         Returns:
             CompleteTaskResponse instance
         """
@@ -178,14 +169,12 @@ class CompleteTaskResponse(BaseModel):
             priority=task.priority.value,
             created_at=task.created_at,
             updated_at=task.updated_at,
-            completed_at=task.completed_at
+            completed_at=task.completed_at,
         )
-    
-    model_config = ConfigDict(
-        from_attributes=True
-    )
-    
-    @field_serializer('created_at', 'updated_at', 'completed_at')
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("created_at", "updated_at", "completed_at")
     def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
         """Serialize datetime fields to ISO format"""
         return value.isoformat() if value else None
@@ -194,9 +183,10 @@ class CompleteTaskResponse(BaseModel):
 class TaskResponse(BaseModel):
     """
     Task response schema for API outputs
-    
+
     Used for serializing individual task data in API responses.
     """
+
     task_id: UUID = Field(..., description="Task identifier")
     title: str = Field(..., description="Task title")
     description: str = Field(..., description="Task description")
@@ -205,16 +195,18 @@ class TaskResponse(BaseModel):
     priority: str = Field(..., description="Task priority")
     created_at: datetime = Field(..., description="Task creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    completed_at: Optional[datetime] = Field(None, description="Task completion timestamp")
-    
+    completed_at: Optional[datetime] = Field(
+        None, description="Task completion timestamp"
+    )
+
     @classmethod
-    def from_entity(cls, task: TaskEntity) -> 'TaskResponse':
+    def from_entity(cls, task: TaskEntity) -> "TaskResponse":
         """
         Create response from task entity
-        
+
         Args:
             task: Task entity to convert
-            
+
         Returns:
             TaskResponse instance
         """
@@ -227,47 +219,50 @@ class TaskResponse(BaseModel):
             priority=task.priority.value,
             created_at=task.created_at,
             updated_at=task.updated_at,
-            completed_at=task.completed_at
+            completed_at=task.completed_at,
         )
 
 
 class TaskListResponse(BaseModel):
     """
     Task list response schema for API outputs
-    
+
     Used for serializing multiple tasks in API responses with
     metadata about the collection.
     """
+
     tasks: List[TaskResponse] = Field(..., description="List of tasks")
     total_count: int = Field(..., description="Total number of tasks")
     user_id: int = Field(..., description="User ID these tasks belong to")
     pending_count: int = Field(..., description="Number of pending tasks")
     completed_count: int = Field(..., description="Number of completed tasks")
-    
+
     @classmethod
-    def from_entities(cls, tasks: List[TaskEntity], user_id: int) -> 'TaskListResponse':
+    def from_entities(cls, tasks: List[TaskEntity], user_id: int) -> "TaskListResponse":
         """
         Create response from task entities
-        
+
         Args:
             tasks: List of task entities to convert
             user_id: User ID these tasks belong to
-            
+
         Returns:
             TaskListResponse instance
         """
         task_responses = [TaskResponse.from_entity(task) for task in tasks]
-        pending_count = len([task for task in tasks if task.status == TaskStatusEnum.PENDING])
-        completed_count = len([task for task in tasks if task.status == TaskStatusEnum.COMPLETED])
-        
+        pending_count = len(
+            [task for task in tasks if task.status == TaskStatusEnum.PENDING]
+        )
+        completed_count = len(
+            [task for task in tasks if task.status == TaskStatusEnum.COMPLETED]
+        )
+
         return cls(
             tasks=task_responses,
             total_count=len(tasks),
             user_id=user_id,
             pending_count=pending_count,
-            completed_count=completed_count
+            completed_count=completed_count,
         )
-    
-    model_config = ConfigDict(
-        from_attributes=True
-    ) 
+
+    model_config = ConfigDict(from_attributes=True)

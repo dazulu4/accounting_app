@@ -17,8 +17,18 @@ class TestListAllUsersUseCase:
         """Test listing all users without any filter."""
         # Arrange
         users = [
-            UserEntity(user_id=1, name="User A", email="a@test.com", status=UserStatusEnum.ACTIVE),
-            UserEntity(user_id=2, name="User B", email="b@test.com", status=UserStatusEnum.INACTIVE),
+            UserEntity(
+                user_id=1,
+                name="User A",
+                email="a@test.com",
+                status=UserStatusEnum.ACTIVE,
+            ),
+            UserEntity(
+                user_id=2,
+                name="User B",
+                email="b@test.com",
+                status=UserStatusEnum.INACTIVE,
+            ),
         ]
         mock_user_gateway.find_all_users.return_value = users
         use_case = ListAllUsersUseCase(mock_user_gateway)
@@ -38,7 +48,12 @@ class TestListAllUsersUseCase:
         """Test listing only active users."""
         # Arrange
         active_users = [
-            UserEntity(user_id=1, name="User A", email="a@test.com", status=UserStatusEnum.ACTIVE),
+            UserEntity(
+                user_id=1,
+                name="User A",
+                email="a@test.com",
+                status=UserStatusEnum.ACTIVE,
+            ),
         ]
         mock_user_gateway.find_users_by_status.return_value = active_users
         use_case = ListAllUsersUseCase(mock_user_gateway)
@@ -49,7 +64,9 @@ class TestListAllUsersUseCase:
         # Assert
         assert len(result) == 1
         assert result[0].status == UserStatusEnum.ACTIVE
-        mock_user_gateway.find_users_by_status.assert_called_once_with(UserStatusEnum.ACTIVE)
+        mock_user_gateway.find_users_by_status.assert_called_once_with(
+            UserStatusEnum.ACTIVE
+        )
         mock_user_gateway.find_all_users.assert_not_called()
 
     def test_list_all_users_empty_result(
@@ -66,4 +83,4 @@ class TestListAllUsersUseCase:
 
         # Assert
         assert len(result) == 0
-        mock_user_gateway.find_all_users.assert_called_once() 
+        mock_user_gateway.find_all_users.assert_called_once()

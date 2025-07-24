@@ -45,10 +45,10 @@ class TestCompleteTaskUseCase:
             description="Test Description",
             user_id=1,
             status=TaskStatusEnum.IN_PROGRESS,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
         )
         mock_task_gateway.find_task_by_id.return_value = task
-        
+
         request = CompleteTaskRequest(task_id=sample_task_id)
         mock_uow = MagicMock()
         use_case = CompleteTaskUseCase(mock_task_gateway, mock_uow)
@@ -82,9 +82,7 @@ class TestCompleteTaskUseCase:
         mock_task_gateway.save_task.assert_not_called()
 
     def test_execute_should_raise_exception_when_task_already_completed(
-        self,
-        mock_task_gateway: MagicMock,
-        completed_task_entity: TaskEntity
+        self, mock_task_gateway: MagicMock, completed_task_entity: TaskEntity
     ):
         """Test completion fails if the task is already completed."""
         # Arrange
@@ -111,7 +109,7 @@ class TestCompleteTaskUseCase:
             description=".",
             user_id=1,
             status=TaskStatusEnum.CANCELLED,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
         )
         mock_task_gateway.find_task_by_id.return_value = task
         request = CompleteTaskRequest(task_id=sample_task_id)
@@ -121,4 +119,4 @@ class TestCompleteTaskUseCase:
         # Act & Assert
         with pytest.raises(TaskStateTransitionException):
             use_case.execute(request)
-        mock_task_gateway.save_task.assert_not_called() 
+        mock_task_gateway.save_task.assert_not_called()

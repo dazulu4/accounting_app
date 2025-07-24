@@ -2,7 +2,12 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from uuid import uuid4
 
-from domain.entities.task_entity import TaskEntity, TaskValidationException, TaskStateTransitionException, TaskAlreadyCompletedException
+from domain.entities.task_entity import (
+    TaskEntity,
+    TaskValidationException,
+    TaskStateTransitionException,
+    TaskAlreadyCompletedException,
+)
 from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
 
 
@@ -21,7 +26,7 @@ class TestTaskEntity:
             title="  Valid Title ",
             description="A valid description.",
             user_id=123,
-            priority=TaskPriorityEnum.HIGH
+            priority=TaskPriorityEnum.HIGH,
         )
         assert task.title == "  Valid Title "  # Title is not stripped at this level
         assert task.description == "A valid description."
@@ -31,26 +36,29 @@ class TestTaskEntity:
         assert isinstance(task.created_at, datetime)
         assert task.completed_at is None
 
-    @pytest.mark.parametrize("title, description, user_id", [
-        ("", "Valid desc", 1),
-        (" ", "Valid desc", 1),
-        ("", "Valid desc", 1),  # Empty string should fail
-        ("T" * 201, "Valid desc", 1),
-        ("Valid title", "", 1),
-        ("Valid title", " ", 1),
-        ("Valid title", "d" * 2001, 1),
-        ("Valid title", "Valid desc", 0),
-        ("Valid title", "Valid desc", -1),
-    ])
-    def test_create_task_with_invalid_data_raises_exception(self, title, description, user_id):
+    @pytest.mark.parametrize(
+        "title, description, user_id",
+        [
+            ("", "Valid desc", 1),
+            (" ", "Valid desc", 1),
+            ("", "Valid desc", 1),  # Empty string should fail
+            ("T" * 201, "Valid desc", 1),
+            ("Valid title", "", 1),
+            ("Valid title", " ", 1),
+            ("Valid title", "d" * 2001, 1),
+            ("Valid title", "Valid desc", 0),
+            ("Valid title", "Valid desc", -1),
+        ],
+    )
+    def test_create_task_with_invalid_data_raises_exception(
+        self, title, description, user_id
+    ):
         """
         Verify that creating a task with invalid data raises a validation exception.
         """
         with pytest.raises(TaskValidationException):
             TaskEntity.create_new_task(
-                title=title,
-                description=description,
-                user_id=user_id
+                title=title, description=description, user_id=user_id
             )
 
     def test_complete_task_sets_status_and_timestamp(self):
@@ -60,7 +68,7 @@ class TestTaskEntity:
         task = TaskEntity.create_new_task("Test", "Desc", 1)
         # Can complete directly from pending according to the enum
         task.complete_task()
-        
+
         assert task.status == TaskStatusEnum.COMPLETED
         assert isinstance(task.completed_at, datetime)
         assert task.updated_at > task.created_at
@@ -72,7 +80,7 @@ class TestTaskEntity:
         task = TaskEntity.create_new_task("Test", "Desc", 1)
         task.complete_task()
         assert task.status == TaskStatusEnum.COMPLETED
-            
+
     def test_cannot_complete_an_already_completed_task(self):
         """
         Verify that attempting to complete an already completed task raises an exception.
@@ -89,7 +97,7 @@ class TestTaskEntity:
         task = TaskEntity.create_new_task("Test", "Desc", 1)
         task.start_task()
         assert task.status == TaskStatusEnum.IN_PROGRESS
-    
+
     def test_cannot_start_a_terminal_task(self):
         """
         Verify that a completed or cancelled task cannot be started.
@@ -98,7 +106,7 @@ class TestTaskEntity:
         task.complete_task()  # Complete directly from pending
         with pytest.raises(TaskAlreadyCompletedException):
             task.start_task()
-        
+
         task_cancelled = TaskEntity.create_new_task("Cancelled Task", "Desc", 2)
         task_cancelled.cancel_task()
         with pytest.raises(TaskAlreadyCompletedException):
@@ -117,11 +125,11 @@ class TestTaskEntity:
         Verify that title and description can be updated on an active task.
         """
         task = TaskEntity.create_new_task("Original Title", "Original Desc", 1)
-        
+
         new_title = "Updated Title"
         task.update_title(new_title)
         assert task.title == new_title
-        
+
         new_desc = "Updated Description which is long enough"
         task.update_description(new_desc)
         assert task.description == new_desc
@@ -132,16 +140,16 @@ class TestTaskEntity:
         """
         task = TaskEntity.create_new_task("Test", "Desc", 1)
         task.complete_task()  # Complete directly from pending
-        
+
         with pytest.raises(TaskAlreadyCompletedException):
             task.update_title("New Title")
-        
+
         with pytest.raises(TaskAlreadyCompletedException):
             task.update_description("New Description")
-            
+
         with pytest.raises(TaskAlreadyCompletedException):
             task.change_priority(TaskPriorityEnum.HIGH)
-            
+
     def test_is_overdue_logic(self):
         """
         Verify the overdue logic works as expected.
@@ -159,4 +167,4 @@ class TestTaskEntity:
         completed_old_task = TaskEntity.create_new_task("Old Completed", "Desc", 3)
         completed_old_task.created_at = datetime.now(timezone.utc) - timedelta(days=400)
         completed_old_task.complete_task()  # Complete directly from pending
-        assert not completed_old_task.is_overdue() 
+        assert not completed_old_task.is_overdue()

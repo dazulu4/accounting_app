@@ -28,7 +28,12 @@ class ListTasksByUserUseCase:
     Use case for listing tasks assigned to a specific user.
     """
 
-    def __init__(self, task_gateway: TaskGateway, user_gateway: UserGateway, unit_of_work: UnitOfWork):
+    def __init__(
+        self,
+        task_gateway: TaskGateway,
+        user_gateway: UserGateway,
+        unit_of_work: UnitOfWork,
+    ):
         self.task_gateway = task_gateway
         self.user_gateway = user_gateway
         self.uow = unit_of_work
@@ -48,24 +53,22 @@ class ListTasksByUserUseCase:
             UserNotFoundException: If the user is not found.
         """
         self._logger.info(
-            "use_case_start_listing_tasks_by_user",
-            extra={"user_id": user_id}
+            "use_case_start_listing_tasks_by_user", extra={"user_id": user_id}
         )
-        
+
         with self.uow:
             user = self.user_gateway.find_user_by_id(user_id)
             if not user:
                 self._logger.warning(
-                    "user_not_found_in_list_tasks_use_case",
-                    extra={"user_id": user_id}
+                    "user_not_found_in_list_tasks_use_case", extra={"user_id": user_id}
                 )
                 raise UserNotFoundException(user_id)
-            
+
             tasks = self.task_gateway.find_tasks_by_user_id(user_id)
-            
+
             self._logger.info(
                 "use_case_tasks_listed_successfully",
-                extra={"user_id": user_id, "task_count": len(tasks)}
+                extra={"user_id": user_id, "task_count": len(tasks)},
             )
-            
-            return TaskListResponse.from_entities(tasks, user_id) 
+
+            return TaskListResponse.from_entities(tasks, user_id)

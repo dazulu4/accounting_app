@@ -12,12 +12,12 @@ from .error_handlers import (
     HTTPErrorHandler,
     ErrorResponseBuilder,
     create_validation_error_response,
-    create_not_found_error_response
+    create_not_found_error_response,
 )
 
 __all__ = [
-    'HTTPErrorHandler',
-    'ErrorResponseBuilder',
-    'create_validation_error_response',
-    'create_not_found_error_response'
-] 
+    "HTTPErrorHandler",
+    "ErrorResponseBuilder",
+    "create_validation_error_response",
+    "create_not_found_error_response",
+]

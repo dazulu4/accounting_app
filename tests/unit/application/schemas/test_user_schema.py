@@ -21,11 +21,14 @@ class TestCreateUserRequest:
         assert req.name == "John Doe"
         assert req.email == "john.doe@example.com"
 
-    @pytest.mark.parametrize("invalid_data", [
-        {"name": " ", "email": "a@b.com"},
-        {"name": "J", "email": "a@b.com"},  # Too short
-        {"name": "John Doe", "email": "not-an-email"},
-    ])
+    @pytest.mark.parametrize(
+        "invalid_data",
+        [
+            {"name": " ", "email": "a@b.com"},
+            {"name": "J", "email": "a@b.com"},  # Too short
+            {"name": "John Doe", "email": "not-an-email"},
+        ],
+    )
     def test_create_user_request_validation_error(self, invalid_data):
         """Test validation errors for CreateUserRequest."""
         with pytest.raises(ValidationError):
@@ -72,4 +75,4 @@ class TestUpdateUserStatusRequest:
     def test_update_user_status_invalid_status(self):
         """Test that an invalid status raises a validation error."""
         with pytest.raises(ValidationError):
-            UpdateUserStatusRequest(status="INVALID_STATUS") 
+            UpdateUserStatusRequest(status="INVALID_STATUS")

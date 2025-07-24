@@ -12,9 +12,9 @@ infrastructure.helpers.database.connection
 # Re-export enterprise configuration for backward compatibility
 from infrastructure.helpers.database.connection import (
     Base,
-    DatabaseConnection, 
+    DatabaseConnection,
     database_connection,
-    get_database_session
+    get_database_session,
 )
 
 # Legacy compatibility aliases
@@ -22,10 +22,10 @@ engine = database_connection._engine
 SessionLocal = database_connection.create_session
 
 __all__ = [
-    'Base',
-    'engine', 
-    'SessionLocal',
-    'DatabaseConnection',
-    'database_connection',
-    'get_database_session'
+    "Base",
+    "engine",
+    "SessionLocal",
+    "DatabaseConnection",
+    "database_connection",
+    "get_database_session",
 ]

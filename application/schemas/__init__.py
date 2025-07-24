@@ -25,17 +25,16 @@ from .task_schema import (
 # Exportar todos los schemas para facilitar las importaciones
 __all__ = [
     # User schemas
-    'UserResponse',
-    'UserListResponse',
-    'CreateUserRequest',
-    'UpdateUserStatusRequest',
-    'UserStatsResponse',
-    
+    "UserResponse",
+    "UserListResponse",
+    "CreateUserRequest",
+    "UpdateUserStatusRequest",
+    "UserStatsResponse",
     # Task schemas
-    'CreateTaskRequest',
-    'CreateTaskResponse',
-    'CompleteTaskRequest',
-    'CompleteTaskResponse',
-    'TaskResponse',
-    'TaskListResponse',
-] 
+    "CreateTaskRequest",
+    "CreateTaskResponse",
+    "CompleteTaskRequest",
+    "CompleteTaskResponse",
+    "TaskResponse",
+    "TaskListResponse",
+]

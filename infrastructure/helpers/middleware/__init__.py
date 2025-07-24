@@ -13,13 +13,13 @@ from .http_middleware import (
     PerformanceMonitoringMiddleware,
     LoggingMiddleware,
     SecurityLoggingMiddleware,
-    configure_middleware_stack
+    configure_middleware_stack,
 )
 
 __all__ = [
-    'ErrorHandlingMiddleware',
-    'PerformanceMonitoringMiddleware',
-    'LoggingMiddleware',
-    'SecurityLoggingMiddleware',
-    'configure_middleware_stack'
-] 
+    "ErrorHandlingMiddleware",
+    "PerformanceMonitoringMiddleware",
+    "LoggingMiddleware",
+    "SecurityLoggingMiddleware",
+    "configure_middleware_stack",
+]

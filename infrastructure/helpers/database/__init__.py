@@ -13,15 +13,15 @@ from .connection import (
     Base,
     DatabaseConnection,
     database_connection,
-    get_database_session
+    get_database_session,
 )
 from .unit_of_work import UnitOfWork, UnitOfWorkException
 
 __all__ = [
-    'Base',
-    'DatabaseConnection', 
-    'database_connection',
-    'get_database_session',
-    'UnitOfWork',
-    'UnitOfWorkException'
-] 
+    "Base",
+    "DatabaseConnection",
+    "database_connection",
+    "get_database_session",
+    "UnitOfWork",
+    "UnitOfWorkException",
+]

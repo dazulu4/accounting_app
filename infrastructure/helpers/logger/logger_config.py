@@ -15,6 +15,7 @@ Key Features:
 import logging
 import logging.config
 import structlog
+import uuid
 from contextlib import contextmanager
 from typing import Any, Dict, Optional
 from dataclasses import dataclass
@@ -103,6 +104,25 @@ class LoggerConfig:
             level=log_level,
             handlers=[logging.StreamHandler()],
         )
+        
+        # Configure additional loggers
+        LoggerConfig._configure_additional_loggers()
+    
+    @staticmethod
+    def _configure_additional_loggers() -> None:
+        """Configure additional loggers for specific components"""
+        # Configure SQLAlchemy logging for development
+        if settings.application.environment == "development":
+            sqlalchemy_logger = logging.getLogger('sqlalchemy.engine')
+            sqlalchemy_logger.setLevel(logging.INFO)
+        
+        # Configure performance logger
+        perf_logger = logging.getLogger('performance')
+        perf_logger.setLevel(logging.INFO)
+        
+        # Configure security logger
+        security_logger = logging.getLogger('security')
+        security_logger.setLevel(logging.WARNING)
     
     @staticmethod
     def get_logger_config() -> Dict[str, Any]:
@@ -134,6 +154,36 @@ def get_logger(name: str) -> structlog.stdlib.BoundLogger:
         LoggerConfig.configure_logging()
     
     return structlog.get_logger(name)
+
+
+def get_request_logger() -> structlog.stdlib.BoundLogger:
+    """
+    Get a logger specifically for HTTP request logging
+    
+    Returns:
+        Configured structlog logger for request logging
+    """
+    return get_logger("http.request")
+
+
+def get_performance_logger() -> structlog.stdlib.BoundLogger:
+    """
+    Get a logger specifically for performance logging
+    
+    Returns:
+        Configured structlog logger for performance logging
+    """
+    return get_logger("performance")
+
+
+def get_security_logger() -> structlog.stdlib.BoundLogger:
+    """
+    Get a logger specifically for security logging
+    
+    Returns:
+        Configured structlog logger for security logging
+    """
+    return get_logger("security")
 
 
 @contextmanager
@@ -221,6 +271,16 @@ def log_function_call(func_name: str, **kwargs):
         
         return wrapper
     return decorator
+
+
+def generate_request_id() -> str:
+    """
+    Generate a unique request ID for tracing
+    
+    Returns:
+        Unique request ID string
+    """
+    return str(uuid.uuid4())
 
 
 # Initialize logging on module import

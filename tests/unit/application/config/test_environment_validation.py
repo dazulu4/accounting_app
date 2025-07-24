@@ -134,7 +134,7 @@ class TestApplicationConfigValidation:
         with pytest.raises(ValidationError) as exc_info:
             ApplicationConfig(environment="invalid")
         # Pydantic validates enum before our custom validator
-        assert "Input should be 'development', 'staging' or 'production'" in str(exc_info.value)
+        assert "Input should be 'development' or 'production'" in str(exc_info.value)
     
     def test_empty_version_raises_error(self):
         """Test empty version raises validation error"""

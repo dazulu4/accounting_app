@@ -1,351 +1,273 @@
 """
-Create Task Use Case - Domain Layer
+Create Task Use Case - Enterprise Edition
 
-This use case handles the creation of new tasks with enterprise validation,
-business rule enforcement, and strategic logging.
+This module implements the business logic for creating tasks in the system.
+It follows the Clean Architecture pattern and uses dependency injection
+for external dependencies.
 
 Key Features:
-- User validation and active status checking
-- Business rule enforcement (max tasks per user)
-- Strategic logging at critical points
-- Transactional management with UoW pattern
-- Enterprise exception handling
+- Business logic validation
+- Domain entity creation
+- Repository interaction
+- Structured logging
+- Error handling with domain exceptions
 """
 
 from typing import Optional
-from uuid import uuid4
-from datetime import datetime, timezone
+from datetime import datetime
 
 from domain.entities.task_entity import TaskEntity
-from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
-from domain.constants.task_constants import TaskConstants
-from application.schemas.task_schema import CreateTaskRequest, CreateTaskResponse
-from domain.gateways.user_gateway import UserGateway
+from domain.entities.user_entity import UserEntity
 from domain.gateways.task_gateway import TaskGateway
+from domain.gateways.user_gateway import UserGateway
+from domain.enums.task_status_enum import TaskPriorityEnum
 from domain.exceptions.business_exceptions import (
     UserNotFoundException,
     UserNotActiveException,
-    MaxTasksExceededException,
-    ValidationException
+    DatabaseException,
+    MaxTasksExceededException
 )
-from infrastructure.helpers.database.unit_of_work import UnitOfWork
-from infrastructure.helpers.logger.logger_config import get_logger, LoggingContext
+from application.schemas.task_schema import CreateTaskRequest, CreateTaskResponse
+from infrastructure.helpers.logger.logger_config import get_logger, logging_context
 
-# Configure logger
+# Initialize structured logger
 logger = get_logger(__name__)
 
 
 class CreateTaskUseCase:
     """
-    Use case for creating new tasks
+    Use case for creating tasks in the system.
     
-    This use case handles the complete workflow of task creation including:
-    - User validation and authorization
-    - Business rule enforcement
-    - Task entity creation
-    - Transactional persistence
-    - Response formatting
-    
-    Business Rules:
-    - User must exist and be active
-    - User cannot exceed maximum task limit
-    - Task title and description must be valid
-    - Task is created with PENDING status by default
+    This use case handles the business logic for task creation,
+    including validation of user existence and status, task limits,
+    and proper error handling.
     """
     
-    def __init__(self, unit_of_work: UnitOfWork, user_service: UserGateway):
+    def __init__(self, task_gateway: TaskGateway, user_gateway: UserGateway):
         """
-        Initialize use case with required dependencies
+        Initialize the use case with required gateways.
         
         Args:
-            user_gateway: Gateway for user operations
+            task_gateway: Gateway for task persistence operations
+            user_gateway: Gateway for user retrieval operations
         """
-        self._unit_of_work = unit_of_work
-        self._user_service = user_service
-        self._logger = get_logger(__name__)
+        self.task_gateway = task_gateway
+        self.user_gateway = user_gateway
     
-    def execute(self, command: CreateTaskRequest) -> CreateTaskResponse:
+    def execute(self, request: CreateTaskRequest) -> CreateTaskResponse:
         """
-        Execute task creation use case
+        Execute the task creation use case.
         
         Args:
-            command: CreateTaskCommand containing task data
+            request: CreateTaskRequest containing task data
             
         Returns:
-            CreateTaskResponse: Response with created task information
+            CreateTaskResponse with created task information
             
         Raises:
-            UserNotFoundException: If user does not exist
-            UserNotActiveException: If user is not active
-            MaxTasksExceededException: If user exceeds task limit
-            ValidationException: If task data is invalid
+            UserNotFoundException: If the specified user doesn't exist
+            UserNotActiveException: If the user is not active
+            DatabaseException: If task creation fails
+            MaxTasksExceededException: If user has reached task limit
         """
-        # Create logging context for this operation
-        with LoggingContext(
-            operation="create_task",
-            user_id=str(command.user_id)
-        ):
-            self._logger.info(
-                "task_creation_started",
-                user_id=command.user_id,
-                title_length=len(command.title),
-                description_length=len(command.description),
-                priority=command.priority.value
+        # Generate request ID for tracing
+        request_id = getattr(request, 'request_id', 'unknown')
+        
+        with logging_context(request_id=request_id, user_id=request.user_id):
+            logger.info(
+                "create_task_use_case_started",
+                user_id=request.user_id,
+                title=request.title[:50] + "..." if len(request.title) > 50 else request.title
             )
             
             try:
                 # Step 1: Validate user exists and is active
-                user = self._validate_user(command.user_id)
+                logger.debug("validating_user", user_id=request.user_id)
+                user = self._validate_user(request.user_id)
                 
-                # Step 2: Enforce business rules
-                self._enforce_business_rules(command, user)
+                # Step 2: Check task limits
+                logger.debug("checking_task_limits", user_id=request.user_id)
+                self._check_task_limits(request.user_id)
                 
                 # Step 3: Create task entity
-                task_entity = self._create_task_entity(command)
+                logger.debug("creating_task_entity", user_id=request.user_id)
+                task_entity = self._create_task_entity(request)
                 
-                # Step 4: Persist task with Unit of Work
-                self._persist_task(task_entity)
+                # Step 4: Save task
+                logger.debug("saving_task", user_id=request.user_id)
+                saved_task = self._save_task(task_entity)
                 
                 # Step 5: Create response
-                response = self._create_response(task_entity)
+                logger.debug("creating_response", user_id=request.user_id)
+                response = self._create_response(saved_task)
                 
-                self._logger.info(
-                    "task_creation_completed_successfully",
-                    task_id=str(task_entity.task_id),
-                    user_id=command.user_id,
-                    status=task_entity.status.value,
-                    created_at=task_entity.created_at.isoformat()
+                logger.info(
+                    "create_task_use_case_completed",
+                    user_id=request.user_id,
+                    task_id=response.task_id
                 )
                 
                 return response
                 
-            except (UserNotFoundException, UserNotActiveException, MaxTasksExceededException) as e:
-                # Log business validation failures
-                self._logger.warning(
-                    "task_creation_failed_business_validation",
-                    user_id=command.user_id,
+            except (UserNotFoundException, UserNotActiveException, 
+                   DatabaseException, MaxTasksExceededException) as e:
+                # Re-raise domain exceptions
+                logger.warning(
+                    "create_task_use_case_failed_domain_exception",
+                    user_id=request.user_id,
                     error_type=type(e).__name__,
-                    error_message=str(e),
-                    error_code=getattr(e, 'error_code', 'UNKNOWN').value if hasattr(getattr(e, 'error_code', None), 'value') else str(getattr(e, 'error_code', 'UNKNOWN'))
+                    error_message=str(e)
                 )
                 raise
-                
-            except ValidationException as e:
-                # Log validation errors
-                self._logger.error(
-                    "task_creation_failed_validation",
-                    user_id=command.user_id,
-                    error_message=str(e),
-                    error_details=getattr(e, 'details', {})
-                )
-                raise
-                
             except Exception as e:
                 # Log unexpected errors
-                self._logger.error(
-                    "task_creation_failed_unexpected_error",
-                    user_id=command.user_id,
+                logger.error(
+                    "create_task_use_case_failed_unexpected_error",
+                    user_id=request.user_id,
                     error_type=type(e).__name__,
-                    error_message=str(e),
-                    command_data={
-                        "title_length": len(command.title),
-                        "description_length": len(command.description),
-                        "priority": command.priority.value
-                    }
+                    error_message=str(e)
                 )
-                raise
+                raise DatabaseException(
+                    message=f"Failed to create task: {str(e)}",
+                    operation="create_task",
+                    details={"user_id": request.user_id}
+                )
     
-    def _validate_user(self, user_id: int):
+    def _validate_user(self, user_id: int) -> UserEntity:
         """
-        Validate user exists and is active
+        Validate that the user exists and is active.
         
         Args:
             user_id: ID of the user to validate
             
         Returns:
-            User entity
+            UserEntity if user exists and is active
             
         Raises:
-            UserNotFoundException: If user does not exist
+            UserNotFoundException: If user doesn't exist
             UserNotActiveException: If user is not active
         """
-        self._logger.debug("validating_user", user_id=user_id)
+        logger.debug("validating_user_existence", user_id=user_id)
         
-        user = self._user_service.find_user_by_id(user_id)
+        user = self.user_gateway.find_user_by_id(user_id)
+        if not user:
+            logger.warning("user_not_found", user_id=user_id)
+            raise UserNotFoundException(f"User with ID {user_id} not found")
         
-        if user is None:
-            self._logger.warning(
-                "user_validation_failed_not_found",
-                user_id=user_id
-            )
-            raise UserNotFoundException(user_id)
+        logger.debug("user_found", user_id=user_id, user_status=user.status.value)
         
         if not user.is_active():
-            self._logger.warning(
-                "user_validation_failed_inactive",
-                user_id=user_id,
-                user_status=user.status.value if hasattr(user, 'status') else 'unknown'
-            )
-            raise UserNotActiveException(user_id, user.status.value if hasattr(user, 'status') else 'inactive')
+            logger.warning("user_not_active", user_id=user_id, status=user.status.value)
+            raise UserNotActiveException(f"User with ID {user_id} is not active (status: {user.status.value})")
         
-        self._logger.debug("user_validation_successful", user_id=user_id)
+        logger.debug("user_validation_passed", user_id=user_id)
         return user
     
-    def _enforce_business_rules(self, command: CreateTaskRequest, user) -> None:
+    def _check_task_limits(self, user_id: int) -> None:
         """
-        Enforce business rules for task creation
+        Check if the user has reached the maximum number of tasks.
         
         Args:
-            command: Task creation command
-            user: User entity
+            user_id: ID of the user to check
             
         Raises:
-            MaxTasksExceededException: If user exceeds task limit
-            ValidationException: If data validation fails
+            MaxTasksExceededException: If user has reached task limit
         """
-        self._logger.debug("enforcing_business_rules", user_id=command.user_id)
+        logger.debug("checking_task_limits", user_id=user_id)
         
-        # Check maximum tasks per user using Unit of Work
-        with self._unit_of_work as uow:
-            active_task_count = uow.task_repository.count_tasks_by_user(command.user_id)
-            
-            self._logger.debug(
-                "checking_task_limit",
-                user_id=command.user_id,
-                current_task_count=active_task_count,
-                max_allowed=TaskConstants.MAX_TASKS_PER_USER
+        # Get current task count for user
+        current_count = self.task_gateway.count_tasks_by_user(user_id)
+        
+        logger.debug("current_task_count", user_id=user_id, count=current_count)
+        
+        # Check against maximum limit (configurable, default 10)
+        max_tasks = 10  # This could come from configuration
+        if current_count >= max_tasks:
+            logger.warning(
+                "max_tasks_exceeded", 
+                user_id=user_id, 
+                current_count=current_count, 
+                max_tasks=max_tasks
             )
-            
-            if active_task_count >= TaskConstants.MAX_TASKS_PER_USER:
-                self._logger.warning(
-                    "business_rule_violation_max_tasks_exceeded",
-                    user_id=command.user_id,
-                    current_task_count=active_task_count,
-                    max_allowed=TaskConstants.MAX_TASKS_PER_USER
-                )
-                raise MaxTasksExceededException(
-                    user_id=command.user_id,
-                    current_count=active_task_count,
-                    max_allowed=TaskConstants.MAX_TASKS_PER_USER
-                )
+            raise MaxTasksExceededException(
+                user_id=user_id,
+                current_count=current_count,
+                max_allowed=max_tasks
+            )
         
-        self._logger.debug("business_rules_validation_successful", user_id=command.user_id)
-        # Additional business rule validations can be added here
-        # For example: user role permissions, task category restrictions, etc.
+        logger.debug("task_limits_check_passed", user_id=user_id)
     
-    def _create_task_entity(self, command: CreateTaskRequest) -> TaskEntity:
+    def _create_task_entity(self, request: CreateTaskRequest) -> TaskEntity:
         """
-        Create task entity from command
+        Create a task entity from the request data.
         
         Args:
-            command: Task creation command
+            request: CreateTaskRequest containing task data
             
         Returns:
-            TaskEntity: Created task entity
-            
-        Raises:
-            ValidationException: If entity creation fails
+            TaskEntity with the task information
         """
-        self._logger.debug("creating_task_entity", user_id=command.user_id)
+        logger.debug("creating_task_entity", user_id=request.user_id)
         
-        try:
-            task_entity = TaskEntity.create_new_task(
-                title=command.title,
-                description=command.description,
-                user_id=command.user_id,
-                priority=command.priority
-            )
-            
-            self._logger.debug(
-                "task_entity_created",
-                task_id=str(task_entity.task_id),
-                user_id=command.user_id,
-                status=task_entity.status.value
-            )
-            
-            return task_entity
-            
-        except Exception as e:
-            self._logger.error(
-                "task_entity_creation_failed",
-                user_id=command.user_id,
-                error=str(e),
-                command_data={
-                    "title": command.title,
-                    "description": command.description,
-                    "priority": command.priority.value
-                }
-            )
-            raise ValidationException(
-                message=f"Failed to create task entity: {str(e)}",
-                details={"command": command.__dict__}
-            )
-    
-    def _persist_task(self, task_entity: TaskEntity) -> None:
-        """
-        Persist task entity using Unit of Work pattern
+        # Ensure priority is the correct enum type
+        priority = request.priority
+        if isinstance(priority, str):
+            priority = TaskPriorityEnum(priority)
         
-        Args:
-            task_entity: Task entity to persist
-            
-        Raises:
-            DatabaseException: If persistence fails
-        """
-        self._logger.debug(
-            "persisting_task",
-            task_id=str(task_entity.task_id),
-            user_id=task_entity.user_id
+        task_entity = TaskEntity.create_new_task(
+            title=request.title,
+            description=request.description,
+            user_id=request.user_id,
+            priority=priority
         )
         
+        logger.debug("task_entity_created", user_id=request.user_id)
+        return task_entity
+    
+    def _save_task(self, task_entity: TaskEntity) -> TaskEntity:
+        """
+        Save the task entity using the task gateway.
+        
+        Args:
+            task_entity: TaskEntity to save
+            
+        Returns:
+            TaskEntity with saved data (including ID)
+            
+        Raises:
+            DatabaseException: If saving fails
+        """
+        logger.debug("saving_task", user_id=task_entity.user_id)
+        
         try:
-            with self._unit_of_work as uow:
-                uow.task_repository.save_task(task_entity)
-                # Additional related operations can be added here
-                # within the same transaction boundary
-                
-            self._logger.debug(
-                "task_persistence_successful",
-                task_id=str(task_entity.task_id),
-                user_id=task_entity.user_id
-            )
-                
+            self.task_gateway.save_task(task_entity)
+            logger.debug("task_saved_successfully", user_id=task_entity.user_id)
+            return task_entity
         except Exception as e:
-            self._logger.error(
-                "task_persistence_failed",
-                task_id=str(task_entity.task_id),
+            logger.error(
+                "task_save_failed", 
                 user_id=task_entity.user_id,
                 error_type=type(e).__name__,
                 error_message=str(e)
             )
-            # Re-raise as business exception
-            from domain.exceptions.business_exceptions import DatabaseException
             raise DatabaseException(
-                message="Failed to save task to database",
+                message=f"Failed to save task: {str(e)}",
                 operation="save_task",
-                details={"task_id": str(task_entity.task_id)},
-                inner_exception=e
+                details={"user_id": task_entity.user_id}
             )
     
     def _create_response(self, task_entity: TaskEntity) -> CreateTaskResponse:
         """
-        Create response DTO from task entity
+        Create a response DTO from the task entity.
         
         Args:
-            task_entity: Created task entity
+            task_entity: TaskEntity with saved data
             
         Returns:
-            CreateTaskResponse: Response DTO
+            CreateTaskResponse with task information
         """
-        self._logger.debug("creating_response", task_id=str(task_entity.task_id))
+        logger.debug("creating_response", user_id=task_entity.user_id)
         
-        return CreateTaskResponse(
-            task_id=task_entity.task_id,
-            title=task_entity.title,
-            description=task_entity.description,
-            user_id=task_entity.user_id,
-            status=task_entity.status.value,
-            priority=task_entity.priority.value,
-            created_at=task_entity.created_at,
-            updated_at=task_entity.updated_at,
-            completed_at=task_entity.completed_at
-        ) 
+        response = CreateTaskResponse.from_entity(task_entity)
+        logger.debug("response_created", user_id=task_entity.user_id)
+        return response 

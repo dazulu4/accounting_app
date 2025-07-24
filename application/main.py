@@ -16,17 +16,18 @@ Key Features:
 """
 
 import time
+from datetime import datetime, timezone
 
 from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from typing import Dict, Any
 
 from infrastructure.entrypoints.http import task_routes, user_routes
-from application.config.environment import settings
+from application.config.environment import settings, EnvironmentEnum
 from application.container import container
 from infrastructure.helpers.database.connection import database_connection
 from infrastructure.helpers.logger.logger_config import LoggerConfig, get_logger
-from infrastructure.helpers.middleware.http_middleware import ErrorHandlingMiddleware, PerformanceMonitoringMiddleware
+from infrastructure.helpers.middleware.http_middleware import configure_middleware_stack
 
 # Initialize structured logger
 logger = get_logger(__name__)
@@ -47,13 +48,6 @@ def create_app() -> Flask:
     
     # Configure dependency injection container
     app.container = container
-
-    # Register API blueprints
-    from infrastructure.entrypoints.http.task_routes import task_blueprint
-    from infrastructure.entrypoints.http.user_routes import user_blueprint
-
-    app.register_blueprint(task_blueprint, url_prefix='/api')
-    app.register_blueprint(user_blueprint, url_prefix='/api')
     
     # Capture startup time for performance monitoring
     app.start_time = time.time()
@@ -65,30 +59,75 @@ def _configure_middleware(app: Flask) -> None:
     """Configure middleware components and dependency injection"""
     logger.debug("configuring_middleware")
     
-    # Configure dependency injection first
-    # di_integration = FlaskDIIntegration(app) # This line is removed as per the edit hint
-    logger.debug("dependency_injection_configured")
-    
-    # Error handling middleware (handles all exceptions automatically)
-    # ErrorHandlingMiddleware(app) # This line is removed as per the edit hint
-    
-    # Performance monitoring middleware
-    # PerformanceMonitoringMiddleware(app) # This line is removed as per the edit hint
+    # Configure complete middleware stack
+    configure_middleware_stack(app)
     
     logger.debug("middleware_configuration_completed")
 
 
 def _configure_cors(app: Flask) -> None:
-    """Configure CORS settings"""
-    logger.debug("configuring_cors", origins=settings.api.cors_origins)
+    """Configure CORS settings with environment-specific configuration"""
+    logger.debug("configuring_cors", 
+                origins=settings.api.cors_origins,
+                environment=settings.application.environment)
     
-    CORS(app, 
+    # Configuración específica por entorno
+    if settings.application.environment == EnvironmentEnum.PRODUCTION:
+        _configure_production_cors(app)
+    else:
+        _configure_development_cors(app)
+    
+    logger.debug("cors_configuration_completed")
+
+
+def _configure_production_cors(app: Flask) -> None:
+    """Configure CORS for production environment with strict security"""
+    logger.debug("configuring_production_cors", 
+                origins=settings.api.cors_origins,
+                methods=settings.api.cors_methods)
+    
+    CORS(app,
          origins=settings.api.cors_origins,
          methods=settings.api.cors_methods,
          allow_headers=settings.api.cors_headers,
-         supports_credentials=True)
+         expose_headers=settings.api.cors_expose_headers,
+         supports_credentials=settings.api.cors_supports_credentials,
+         max_age=settings.api.cors_max_age)
     
-    logger.debug("cors_configuration_completed")
+    # Agregar headers de seguridad para producción
+    @app.after_request
+    def add_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+        return response
+
+
+
+
+
+def _configure_development_cors(app: Flask) -> None:
+    """Configure CORS for development environment with permissive settings"""
+    logger.debug("configuring_development_cors", 
+                origins=settings.api.cors_origins,
+                methods=settings.api.cors_methods)
+    
+    CORS(app,
+         origins=settings.api.cors_origins,
+         methods=settings.api.cors_methods,
+         allow_headers=settings.api.cors_headers,
+         expose_headers=settings.api.cors_expose_headers,
+         supports_credentials=settings.api.cors_supports_credentials,
+         max_age=settings.api.cors_max_age)
+    
+    # Headers de seguridad básicos para desarrollo
+    @app.after_request
+    def add_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        return response
 
 
 def _register_blueprints(app: Flask) -> None:
@@ -96,14 +135,12 @@ def _register_blueprints(app: Flask) -> None:
     logger.debug("registering_blueprints")
     
     # Task management endpoints
-    app.register_blueprint(task_routes.blueprint, url_prefix='/api/tasks')
+    app.register_blueprint(task_routes.task_blueprint, url_prefix='/api/tasks')
     logger.debug("task_routes_registered", url_prefix="/api/tasks")
     
-    # User management endpoints  
-    app.register_blueprint(user_routes.blueprint, url_prefix='/api/users')
+    # User management endpoints
+    app.register_blueprint(user_routes.user_blueprint, url_prefix='/api/users')
     logger.debug("user_routes_registered", url_prefix="/api/users")
-    
-    logger.debug("blueprints_registration_completed")
 
 
 def _register_health_endpoints(app: Flask) -> None:
@@ -112,142 +149,267 @@ def _register_health_endpoints(app: Flask) -> None:
     
     @app.route('/api/health')
     def health_check():
-        """Basic health check endpoint"""
-        logger.debug("health_check_accessed")
-        return jsonify({
-            "status": "healthy",
-            "service": "accounting-app",
-            "version": settings.application.version,
-            "environment": settings.application.environment.value
-        })
-    
+        """Enhanced health check with system metrics"""
+        logger.debug("health_check_requested")
+        
+        try:
+            # Check database connectivity
+            db_status = _check_database_health()
+            
+            # Get system metrics
+            memory_status = _check_memory_health()
+            disk_status = _check_disk_health()
+            
+            health_data = {
+                "status": "healthy" if db_status["status"] == "healthy" else "unhealthy",
+                "service": "accounting-app",
+                "version": settings.application.version,
+                "environment": settings.application.environment.value,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "uptime_seconds": time.time() - app.start_time,
+                "checks": {
+                    "database": db_status,
+                    "memory": memory_status,
+                    "disk": disk_status
+                }
+            }
+            
+            status_code = 200 if health_data["status"] == "healthy" else 503
+            logger.info("health_check_completed", status=health_data["status"])
+            
+            return jsonify(health_data), status_code
+            
+        except Exception as e:
+            logger.error("health_check_failed", error=str(e))
+            return jsonify({
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }), 503
+
     @app.route('/api/health/detailed')
     def detailed_health_check():
-        """Detailed health check with system information"""
-        logger.debug("detailed_health_check_accessed")
+        """Comprehensive health check with all validations"""
+        logger.debug("detailed_health_check_requested")
         
-        import time
-        from datetime import datetime, timezone
-        
-        health_data = {
-            "status": "healthy",
-            "service": "accounting-app",
-            "version": settings.application.version,
-            "environment": settings.application.environment.value,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "uptime_seconds": time.time() - app.start_time if hasattr(app, 'start_time') else 0,
-            "checks": {
-                "database": _check_database_health(),
-                "memory": "ok",
-                "disk": "ok"
+        try:
+            checks = {}
+            
+            # Database check
+            checks["database"] = _check_database_health()
+            
+            # System checks
+            checks["memory"] = _check_memory_health()
+            checks["disk"] = _check_disk_health()
+            
+            # Configuration check
+            checks["configuration"] = {
+                "status": "healthy",
+                "environment": settings.application.environment.value,
+                "log_level": settings.application.log_level,
+                "debug_mode": settings.application.debug
             }
-        }
-        
-        logger.info("detailed_health_check_completed", health_status="healthy")
-        return jsonify(health_data)
-    
+            
+            # API configuration check
+            checks["api"] = {
+                "status": "healthy",
+                "host": settings.api.host,
+                "port": settings.api.port,
+                "cors_enabled": bool(settings.api.cors_origins)
+            }
+            
+            # Determine overall status
+            overall_status = "healthy"
+            if any(check.get("status") == "unhealthy" for check in checks.values()):
+                overall_status = "unhealthy"
+            
+            health_data = {
+                "status": overall_status,
+                "service": "accounting-app",
+                "version": settings.application.version,
+                "environment": settings.application.environment.value,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "uptime_seconds": time.time() - app.start_time,
+                "checks": checks
+            }
+            
+            status_code = 200 if overall_status == "healthy" else 503
+            logger.info("detailed_health_check_completed", status=overall_status)
+            
+            return jsonify(health_data), status_code
+            
+        except Exception as e:
+            logger.error("detailed_health_check_failed", error=str(e))
+            return jsonify({
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }), 503
+
     @app.route('/api/version')
     def version_info():
-        """Version information endpoint"""
-        logger.debug("version_info_accessed")
-        return jsonify({
-            "service": "accounting-app",
+        """Application version information"""
+        logger.debug("version_info_requested")
+        
+        version_data = {
             "version": settings.application.version,
-            "build_date": "2025-01-19",
             "environment": settings.application.environment.value,
-            "features": [
-                "task_management",
-                "user_management", 
-                "structured_logging",
-                "error_handling",
-                "performance_monitoring"
-            ]
-        })
-    
-    logger.debug("health_endpoints_registered")
+            "build_date": datetime.now(timezone.utc).isoformat(),
+            "uptime_seconds": time.time() - app.start_time
+        }
+        
+        logger.info("version_info_completed")
+        return jsonify(version_data), 200
 
 
 def _configure_error_handlers(app: Flask) -> None:
-    """Configure custom error handlers (in addition to middleware)"""
-    logger.debug("configuring_custom_error_handlers")
+    """Configure application error handlers"""
+    logger.debug("configuring_error_handlers")
     
-    from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler
-    
-    # Custom 404 handler for unmatched routes
     @app.errorhandler(404)
     def handle_not_found(error):
-        """Handle 404 errors with consistent format"""
-        logger.warning(
-            "endpoint_not_found",
-            path=request.path,
-            method=request.method
-        )
+        """Handle 404 Not Found errors"""
+        logger.warning("not_found_error", path=request.path, method=request.method)
         
-        # Use centralized error handling
-        response_data, status_code = HTTPErrorHandler.handle_exception(error)
-        return jsonify(response_data), status_code
-    
-    # Custom 405 handler for method not allowed
+        return jsonify({
+            "error": {
+                "type": "NOT_FOUND",
+                "code": "RESOURCE_NOT_FOUND",
+                "message": f"The requested resource '{request.path}' was not found",
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                "path": request.path
+            }
+        }), 404
+
     @app.errorhandler(405)
     def handle_method_not_allowed(error):
-        """Handle 405 errors with consistent format"""
-        logger.warning(
-            "method_not_allowed",
-            path=request.path,
-            method=request.method,
-            allowed_methods=error.valid_methods if hasattr(error, 'valid_methods') else []
-        )
+        """Handle 405 Method Not Allowed errors"""
+        logger.warning("method_not_allowed", 
+                      path=request.path, 
+                      method=request.method,
+                      allowed_methods=getattr(error, 'valid_methods', []))
         
-        # Use centralized error handling
-        response_data, status_code = HTTPErrorHandler.handle_exception(error)
-        return jsonify(response_data), status_code
-    
-    logger.debug("custom_error_handlers_configured")
+        return jsonify({
+            "error": {
+                "type": "METHOD_NOT_ALLOWED",
+                "code": "INVALID_HTTP_METHOD",
+                "message": f"Method '{request.method}' not allowed for '{request.path}'",
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                "path": request.path,
+                "method": request.method
+            }
+        }), 405
 
 
-def _check_database_health() -> str:
+def _check_database_health() -> Dict[str, Any]:
+    """Check database health with detailed metrics"""
+    try:
+        start_time = time.time()
+        with database_connection() as connection:
+            connection.execute("SELECT 1")
+        response_time = time.time() - start_time
+        
+        return {
+            "status": "healthy",
+            "response_time_ms": round(response_time * 1000, 2),
+            "connection_pool_size": getattr(database_connection, 'pool_size', 'unknown')
+        }
+    except Exception as e:
+        logger.error("database_health_check_failed", error=str(e))
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }
+
+
+def _check_memory_health() -> Dict[str, Any]:
+    """Check memory usage metrics"""
+    try:
+        import psutil
+        memory = psutil.virtual_memory()
+        
+        return {
+            "status": "healthy" if memory.percent < 90 else "warning",
+            "used_percent": memory.percent,
+            "available_mb": memory.available // 1024 // 1024,
+            "total_mb": memory.total // 1024 // 1024
+        }
+    except Exception as e:
+        logger.error("memory_health_check_failed", error=str(e))
+        return {
+            "status": "unknown",
+            "error": str(e)
+        }
+
+
+def _check_disk_health() -> Dict[str, Any]:
+    """Check disk usage metrics"""
+    try:
+        import psutil
+        disk = psutil.disk_usage('/')
+        
+        return {
+            "status": "healthy" if disk.percent < 90 else "warning",
+            "used_percent": disk.percent,
+            "free_gb": disk.free // 1024 // 1024 // 1024,
+            "total_gb": disk.total // 1024 // 1024 // 1024
+        }
+    except Exception as e:
+        logger.error("disk_health_check_failed", error=str(e))
+        return {
+            "status": "unknown",
+            "error": str(e)
+        }
+
+
+def create_application() -> Flask:
     """
-    Check database health status
+    Create and configure the Flask application
     
     Returns:
-        Status string indicating database health
+        Configured Flask application instance
     """
-    try:
-        # Try to get a database session and perform a simple query
-        with database_connection.create_session() as session:
-            # Execute a simple query to test connectivity
-            session.execute("SELECT 1")
-            return "healthy"
+    logger.info("creating_application", environment=settings.application.environment)
     
-    except Exception as e:
-        logger.error(
-            "database_health_check_failed",
-            error_type=type(e).__name__,
-            error_message=str(e)
-        )
-        return "unhealthy"
+    # Create Flask app
+    app = create_app()
+    
+    # Configure middleware (must be first)
+    _configure_middleware(app)
+    
+    # Configure CORS
+    _configure_cors(app)
+    
+    # Register blueprints
+    _register_blueprints(app)
+    
+    # Register health endpoints
+    _register_health_endpoints(app)
+    
+    # Configure error handlers
+    _configure_error_handlers(app)
+    
+    logger.info("application_created_successfully")
+    return app
 
 
-# Inicializar la aplicación Flask
-app = create_app()
+# Create the application instance
+app = create_application()
 
-# Store application start time for uptime calculation
-import time
-app.start_time = time.time()
 
-# Apply middleware
-ErrorHandlingMiddleware(app)
-PerformanceMonitoringMiddleware(app)
-
-# Mensaje de log al iniciar
-logger.info(
-    "application_startup_info",
-    version=settings.application.version,
-    environment=settings.application.environment.value,
-    debug_mode=settings.application.debug
-)
-
-# Punto de entrada para el servidor de desarrollo
 if __name__ == '__main__':
-    logger.info("starting_development_server", port=5000, debug=True)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    logger.info("starting_application", 
+                host=settings.api.host, 
+                port=settings.api.port,
+                environment=settings.application.environment)
+    
+    # Suprimir warning del servidor de desarrollo en modo debug
+    if settings.application.debug:
+        import warnings
+        warnings.filterwarnings("ignore", message="This is a development server")
+    
+    app.run(
+        host=settings.api.host,
+        port=settings.api.port,
+        debug=settings.application.debug
+    )

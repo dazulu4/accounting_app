@@ -24,6 +24,7 @@ from application.config.environment import settings
 from infrastructure.helpers.logger.logger_config import get_logger
 from infrastructure.helpers.logger.logger_config import configure_logging
 import structlog.contextvars
+from application.config.environment import EnvironmentEnum
 
 # Initialize enterprise logger
 logger = get_logger(__name__)
@@ -174,13 +175,13 @@ def _flask_to_api_gateway_response(flask_response) -> Dict[str, Any]:
     headers = dict(flask_response.headers)
     body = flask_response.get_data(as_text=True)
     
-    # Ensure CORS headers are present
-    headers.update({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Request-ID',
-        'Content-Type': headers.get('Content-Type', 'application/json')
-    })
+    # Get CORS configuration based on environment
+    cors_headers = _get_cors_headers()
+    headers.update(cors_headers)
+    
+    # Ensure Content-Type is set
+    if 'Content-Type' not in headers:
+        headers['Content-Type'] = 'application/json'
     
     return {
         'statusCode': status_code,
@@ -188,6 +189,48 @@ def _flask_to_api_gateway_response(flask_response) -> Dict[str, Any]:
         'body': body,
         'isBase64Encoded': False
     }
+
+
+def _get_cors_headers() -> Dict[str, str]:
+    """
+    Get CORS headers based on environment configuration
+    
+    Returns:
+        Dictionary of CORS headers
+    """
+    # Base CORS headers
+    cors_headers = {
+        'Access-Control-Allow-Methods': ','.join(settings.api.cors_methods),
+        'Access-Control-Allow-Headers': ','.join(settings.api.cors_headers),
+    }
+    
+    # Add expose headers if configured
+    if settings.api.cors_expose_headers:
+        cors_headers['Access-Control-Expose-Headers'] = ','.join(settings.api.cors_expose_headers)
+    
+    # Add credentials support if enabled
+    if settings.api.cors_supports_credentials:
+        cors_headers['Access-Control-Allow-Credentials'] = 'true'
+    
+    # Add max age if configured
+    if settings.api.cors_max_age > 0:
+        cors_headers['Access-Control-Max-Age'] = str(settings.api.cors_max_age)
+    
+    # Set origin based on environment
+    if settings.application.environment == EnvironmentEnum.PRODUCTION:
+        # In production, use configured origins or deny if none
+        if settings.api.cors_origins and '*' not in settings.api.cors_origins:
+            # For API Gateway, we need to handle multiple origins differently
+            # For now, use the first configured origin
+            cors_headers['Access-Control-Allow-Origin'] = settings.api.cors_origins[0]
+        else:
+            # Fallback to deny all in production
+            cors_headers['Access-Control-Allow-Origin'] = 'null'
+    else:
+        # In development, allow all origins
+        cors_headers['Access-Control-Allow-Origin'] = '*'
+    
+    return cors_headers
 
 
 def _create_error_response(error: Exception, request_id: str) -> Dict[str, Any]:
@@ -235,15 +278,16 @@ def _create_error_response(error: Exception, request_id: str) -> Dict[str, Any]:
             "exception_message": str(error)
         }
     
+    # Get CORS headers and add error-specific headers
+    headers = _get_cors_headers()
+    headers.update({
+        'Content-Type': 'application/json',
+        'X-Request-ID': request_id
+    })
+    
     return {
         'statusCode': status_code,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
-            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Request-ID',
-            'X-Request-ID': request_id
-        },
+        'headers': headers,
         'body': json.dumps(error_body),
         'isBase64Encoded': False
     }

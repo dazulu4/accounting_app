@@ -11,13 +11,15 @@ Components:
 from .http_middleware import (
     ErrorHandlingMiddleware,
     PerformanceMonitoringMiddleware,
-    log_endpoint_access,
-    require_json
+    LoggingMiddleware,
+    SecurityLoggingMiddleware,
+    configure_middleware_stack
 )
 
 __all__ = [
     'ErrorHandlingMiddleware',
     'PerformanceMonitoringMiddleware',
-    'log_endpoint_access',
-    'require_json'
+    'LoggingMiddleware',
+    'SecurityLoggingMiddleware',
+    'configure_middleware_stack'
 ] 

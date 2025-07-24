@@ -12,18 +12,18 @@ Key Features:
 - AWS integration ready
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 from enum import Enum
 from pydantic import Field, field_validator, ConfigDict, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic.types import SecretStr
 import re
+import os
 
 
 class EnvironmentEnum(str, Enum):
     """Application environment enumeration"""
     DEVELOPMENT = "development"
-    STAGING = "staging"
     PRODUCTION = "production"
 
 
@@ -140,11 +140,11 @@ class DatabaseConfig(BaseSettings):
 
 class ApplicationConfig(BaseSettings):
     """
-    Application configuration
+    Application configuration using standard environment variables
     
     Environment Variables:
-    - APP_ENVIRONMENT: Application environment (development/staging/production)
-    - APP_DEBUG: Debug mode (default: false)
+    - APP_ENVIRONMENT: Application environment (development/production)
+    - APP_DEBUG: Debug mode (true/false)
     - APP_VERSION: Application version (default: 1.0.0)
     - LOG_LEVEL: Logging level (default: INFO)
     - LOG_FORMAT: Log format (json/text, default: json)
@@ -218,7 +218,7 @@ class ApplicationConfig(BaseSettings):
 
 class APIConfig(BaseSettings):
     """
-    API configuration
+    API configuration with enterprise-grade CORS settings
     
     Environment Variables:
     - API_HOST: API host (default: 0.0.0.0)
@@ -227,16 +227,25 @@ class APIConfig(BaseSettings):
     - CORS_ORIGINS: Allowed CORS origins (comma-separated)
     - CORS_METHODS: Allowed CORS methods (comma-separated)
     - CORS_HEADERS: Allowed CORS headers (comma-separated)
+    - CORS_EXPOSE_HEADERS: Exposed CORS headers (comma-separated)
+    - CORS_SUPPORTS_CREDENTIALS: Enable credentials support (default: true)
+    - CORS_MAX_AGE: CORS preflight cache time in seconds (default: 3600)
     """
     
     host: str = Field(default="0.0.0.0")
     port: int = Field(default=8000, ge=1, le=65535)
     prefix: str = Field(default="/api", pattern="^/.*")
     
-    # CORS configuration
-    cors_origins: List[str] = Field(default=["*"])
+    # CORS configuration - enterprise-grade
+    cors_origins: List[str] = Field(default=["http://localhost:4200"])
     cors_methods: List[str] = Field(default=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-    cors_headers: List[str] = Field(default=["*"])
+    cors_headers: List[str] = Field(default=["Content-Type", "Authorization", "X-Request-ID"])
+    cors_expose_headers: List[str] = Field(default=["Content-Type", "X-Request-ID"])
+    cors_supports_credentials: bool = Field(default=True)
+    cors_max_age: int = Field(default=3600, ge=0, le=86400)
+    
+    # Security headers configuration
+    security_headers: Dict[str, str] = Field(default_factory=dict)
 
     model_config = ConfigDict(
         env_prefix="API_"
@@ -256,12 +265,58 @@ class APIConfig(BaseSettings):
             raise ValueError(f"Invalid API port: {v}. Must be between 1 and 65535.")
         return v
     
-    @field_validator('cors_origins', 'cors_methods', 'cors_headers', mode='before')
+    @field_validator('cors_origins', 'cors_methods', 'cors_headers', 'cors_expose_headers', mode='before')
     def split_comma_separated(cls, value):
         """Convert comma-separated string to list"""
         if isinstance(value, str):
             return [item.strip() for item in value.split(',') if item.strip()]
         return value
+    
+    @field_validator('cors_origins')
+    def validate_cors_origins(cls, v):
+        """Validate CORS origins"""
+        # Basic validation - check for empty list
+        if not v:
+            raise ValueError("CORS origins cannot be empty")
+        
+        # Check for wildcard in production (this will be validated at runtime)
+        if '*' in v:
+            # Log warning but don't fail validation
+            import logging
+            logging.warning("Wildcard (*) in CORS origins - ensure this is not used in production")
+        
+        return v
+    
+    @staticmethod
+    def _is_valid_url(url: str) -> bool:
+        """Validate URL format"""
+        import re
+        # Handle None and empty strings
+        if url is None or not url.strip():
+            return False
+        
+        # Check URL length (reasonable limit)
+        if len(url) > 500:
+            return False
+        
+        # Basic URL validation pattern - only HTTPS for production
+        url_pattern = r'^https://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(:\d+)?(/.*)?$'
+        return bool(re.match(url_pattern, url))
+
+
+class RateLimitConfig(BaseSettings):
+    """Rate limiting configuration"""
+    enabled: bool = Field(default=True)
+    requests_per_second: int = Field(default=10, ge=1, le=1000)
+    window_size_seconds: int = Field(default=60, ge=10, le=3600)
+    burst_limit: int = Field(default=20, ge=1, le=1000)
+    
+    @field_validator('burst_limit')
+    def validate_burst_limit(cls, v, info):
+        """Burst limit should be >= requests_per_second"""
+        if 'requests_per_second' in info.data and v < info.data['requests_per_second']:
+            raise ValueError("Burst limit must be >= requests per second")
+        return v
 
 
 class AWSConfig(BaseSettings):
@@ -312,6 +367,7 @@ class AppSettings(BaseSettings):
     application: ApplicationConfig = Field(default_factory=ApplicationConfig)
     api: APIConfig = Field(default_factory=APIConfig)
     aws: AWSConfig = Field(default_factory=AWSConfig)
+    rate_limit: RateLimitConfig = Field(default_factory=RateLimitConfig)
     
     model_config = SettingsConfigDict(
         env_file=".env",

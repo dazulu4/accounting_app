@@ -18,6 +18,7 @@ Key Features:
 
 import json
 import time
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 import structlog.contextvars
@@ -276,7 +277,7 @@ def _create_error_response(error: Exception, request_id: str) -> Dict[str, Any]:
                 else str(error)
             ),
             "request_id": request_id,
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     }
 

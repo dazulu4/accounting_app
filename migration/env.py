@@ -13,7 +13,31 @@ Key Features:
 - Auto-generation support with all models
 """
 
+import os
 from logging.config import fileConfig
+
+# Cargar variables de entorno desde .env antes de importar configuración
+def load_env_file():
+    """Cargar variables de entorno desde .env"""
+    try:
+        env_file = ".env"
+        if os.path.exists(env_file):
+            with open(env_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        key = key.strip()
+                        value = value.strip().strip('"').strip("'")
+                        os.environ[key] = value
+            return True
+        return False
+    except Exception as e:
+        print(f"Warning: Error loading .env file: {e}")
+        return False
+
+# Cargar variables de entorno
+load_env_file()
 
 from alembic import context
 from sqlalchemy import create_engine, pool

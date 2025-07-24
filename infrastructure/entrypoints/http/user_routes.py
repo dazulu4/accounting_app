@@ -26,7 +26,7 @@ user_blueprint = Blueprint("users", __name__)
 logger = get_logger(__name__)
 
 
-@user_blueprint.route("/users", methods=["GET"])
+@user_blueprint.route("", methods=["GET"])
 def list_all_users():
     """Lista todos los usuarios."""
     # Get request context
@@ -72,7 +72,7 @@ def list_all_users():
         return jsonify(response_data), status_code
 
 
-@user_blueprint.route("/users/<int:user_id>/tasks", methods=["GET"])
+@user_blueprint.route("/<int:user_id>/tasks", methods=["GET"])
 def list_tasks_by_user(user_id: int):
     """Lista las tareas de un usuario específico."""
     # Get request context

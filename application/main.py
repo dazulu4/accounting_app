@@ -273,23 +273,40 @@ def _register_health_endpoints(app: Flask) -> None:
 
     @app.route("/api/version")
     def version_info():
-        """Application version information"""
-        logger.debug("version_info_requested")
+        """Get application version information"""
+        return jsonify(
+            {
+                "version": "1.0.0",
+                "environment": settings.application.environment.value,
+                "service": "accounting-app",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        )
 
-        version_data = {
-            "version": settings.application.version,
-            "environment": settings.application.environment.value,
-            "build_date": datetime.now(timezone.utc).isoformat(),
-            "uptime_seconds": time.time() - app.start_time,
-        }
-
-        logger.info("version_info_completed")
-        return jsonify(version_data), 200
+    @app.route("/api/test/error/<error_type>")
+    def test_error(error_type: str):
+        """Test endpoint to generate different types of errors"""
+        if error_type == "validation":
+            from domain.exceptions.business_exceptions import ValidationException
+            raise ValidationException("Campo requerido faltante", field_name="email")
+        elif error_type == "not_found":
+            from domain.exceptions.business_exceptions import UserNotFoundException
+            raise UserNotFoundException("Usuario no encontrado", user_id=999)
+        elif error_type == "business":
+            from domain.exceptions.business_exceptions import BusinessRuleViolationException
+            raise BusinessRuleViolationException("Regla de negocio violada")
+        elif error_type == "internal":
+            raise ValueError("Error interno de prueba")
+        else:
+            return jsonify({"message": "Tipo de error no reconocido"}), 400
 
 
 def _configure_error_handlers(app: Flask) -> None:
     """Configure application error handlers"""
     logger.debug("configuring_error_handlers")
+
+    # Import HTTPErrorHandler
+    from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler
 
     @app.errorhandler(404)
     def handle_not_found(error):
@@ -303,7 +320,7 @@ def _configure_error_handlers(app: Flask) -> None:
                         "type": "NOT_FOUND",
                         "code": "RESOURCE_NOT_FOUND",
                         "message": f"The requested resource '{request.path}' was not found",
-                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                         "path": request.path,
                     }
                 }
@@ -328,7 +345,7 @@ def _configure_error_handlers(app: Flask) -> None:
                         "type": "METHOD_NOT_ALLOWED",
                         "code": "INVALID_HTTP_METHOD",
                         "message": f"Method '{request.method}' not allowed for '{request.path}'",
-                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                         "path": request.path,
                         "method": request.method,
                     }
@@ -336,6 +353,16 @@ def _configure_error_handlers(app: Flask) -> None:
             ),
             405,
         )
+
+    @app.errorhandler(Exception)
+    def handle_general_exception(error):
+        """Handle all unhandled exceptions using HTTPErrorHandler"""
+        logger.error("unhandled_exception", error=str(error), exc_info=True)
+        
+        # Use HTTPErrorHandler to get proper response
+        response_dict, status_code = HTTPErrorHandler.handle_exception(error)
+        
+        return jsonify(response_dict), status_code
 
 
 def _check_database_health() -> Dict[str, Any]:

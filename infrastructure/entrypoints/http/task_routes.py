@@ -38,7 +38,7 @@ task_blueprint = Blueprint("tasks", __name__)
 logger = get_logger(__name__)
 
 
-@task_blueprint.route("/tasks", methods=["POST"])
+@task_blueprint.route("", methods=["POST"])
 def create_task():
     """Crea una nueva tarea."""
     # Get request context
@@ -116,7 +116,7 @@ def create_task():
         return jsonify(response_data), status_code
 
 
-@task_blueprint.route("/tasks/<uuid:task_id>/complete", methods=["PUT"])
+@task_blueprint.route("/<uuid:task_id>/complete", methods=["PUT"])
 def complete_task(task_id: UUID):
     """Marca una tarea como completada."""
     # Get request context

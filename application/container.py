@@ -55,7 +55,7 @@ class Container:
     def create_task_use_case(self) -> CreateTaskUseCase:
         if self._create_task_use_case is None:
             self._create_task_use_case = CreateTaskUseCase(
-                unit_of_work=UnitOfWork(), user_service=self.user_service
+                task_gateway=self.task_gateway, user_gateway=self.user_gateway
             )
         return self._create_task_use_case
 
@@ -105,7 +105,7 @@ class Container:
     def list_all_users_use_case(self) -> ListAllUsersUseCase:
         if self._list_all_users_use_case is None:
             self._list_all_users_use_case = ListAllUsersUseCase(
-                user_service=self.user_service
+                user_gateway=self.user_gateway
             )
         return self._list_all_users_use_case
 

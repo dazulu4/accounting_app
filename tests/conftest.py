@@ -12,22 +12,23 @@ Key Features:
 - Coverage configuration integration
 """
 
-import pytest
 import asyncio
 from datetime import datetime, timezone
-from uuid import uuid4, UUID
-from typing import Dict, Any, Generator
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+from uuid import UUID, uuid4
+
+import pytest
 
 # Import enterprise components
-from application.config.environment import settings
-from application.schemas.task_schema import CreateTaskRequest, CreateTaskResponse
+from application.schemas.task_schema import (
+    CreateTaskRequest,
+    CreateTaskResponse,
+)
 from domain.entities.task_entity import TaskEntity
-from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
+from domain.enums.task_status_enum import TaskPriorityEnum, TaskStatusEnum
 from domain.gateways.task_gateway import TaskGateway
 from domain.gateways.user_gateway import UserGateway
 from infrastructure.helpers.database.unit_of_work import UnitOfWork
-
 
 # =============================================================================
 # Test Configuration
@@ -133,7 +134,9 @@ def completed_task_entity(sample_task_entity: TaskEntity) -> TaskEntity:
 def create_task_request(sample_user_id: int) -> CreateTaskRequest:
     """Sample create task request"""
     return CreateTaskRequest(
-        title="Test Task", description="Test task description", user_id=sample_user_id
+        title="Test Task",
+        description="Test task description",
+        user_id=sample_user_id,
     )
 
 

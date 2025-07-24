@@ -13,22 +13,25 @@ Key Features:
 - Error handling with domain exceptions
 """
 
-from typing import Optional
-from datetime import datetime
-
+from application.schemas.task_schema import (
+    CreateTaskRequest,
+    CreateTaskResponse,
+)
 from domain.entities.task_entity import TaskEntity
 from domain.entities.user_entity import UserEntity
-from domain.gateways.task_gateway import TaskGateway
-from domain.gateways.user_gateway import UserGateway
 from domain.enums.task_status_enum import TaskPriorityEnum
 from domain.exceptions.business_exceptions import (
-    UserNotFoundException,
-    UserNotActiveException,
     DatabaseException,
     MaxTasksExceededException,
+    UserNotActiveException,
+    UserNotFoundException,
 )
-from application.schemas.task_schema import CreateTaskRequest, CreateTaskResponse
-from infrastructure.helpers.logger.logger_config import get_logger, logging_context
+from domain.gateways.task_gateway import TaskGateway
+from domain.gateways.user_gateway import UserGateway
+from infrastructure.helpers.logger.logger_config import (
+    get_logger,
+    logging_context,
+)
 
 # Initialize structured logger
 logger = get_logger(__name__)
@@ -200,7 +203,9 @@ class CreateTaskUseCase:
                 max_tasks=max_tasks,
             )
             raise MaxTasksExceededException(
-                user_id=user_id, current_count=current_count, max_allowed=max_tasks
+                user_id=user_id,
+                current_count=current_count,
+                max_allowed=max_tasks,
             )
 
         logger.debug("task_limits_check_passed", user_id=user_id)

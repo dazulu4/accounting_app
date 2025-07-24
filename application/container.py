@@ -18,7 +18,9 @@ from domain.usecases.complete_task_use_case import CompleteTaskUseCase
 from domain.usecases.create_task_use_case import CreateTaskUseCase
 from domain.usecases.list_all_users_use_case import ListAllUsersUseCase
 from domain.usecases.list_tasks_by_user_use_case import ListTasksByUserUseCase
-from infrastructure.driven_adapters.repositories.task_repository import TaskRepository
+from infrastructure.driven_adapters.repositories.task_repository import (
+    TaskRepository,
+)
 from infrastructure.driven_adapters.repositories.user_repository_fake import (
     FakeUserService,
 )
@@ -119,7 +121,9 @@ class Container:
     @property
     def task_gateway(self) -> TaskGateway:
         if self._task_gateway is None:
-            from infrastructure.helpers.database.connection import get_database_session
+            from infrastructure.helpers.database.connection import (
+                get_database_session,
+            )
 
             session = get_database_session()
             self._task_gateway = TaskRepository(session)

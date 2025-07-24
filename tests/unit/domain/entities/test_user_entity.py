@@ -3,7 +3,8 @@ Unit Tests for UserEntity
 """
 
 import pytest
-from domain.entities.user_entity import UserEntity, UserValidationException
+
+from domain.entities.user_entity import UserEntity
 from domain.enums.user_status_enum import UserStatusEnum
 
 
@@ -46,7 +47,10 @@ class TestUserEntity:
         """
         with pytest.raises(ValueError):
             UserEntity(
-                user_id=user_id, name=name, email=email, status=UserStatusEnum.ACTIVE
+                user_id=user_id,
+                name=name,
+                email=email,
+                status=UserStatusEnum.ACTIVE,
             )
 
     def test_is_active_logic(self):

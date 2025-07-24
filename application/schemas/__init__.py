@@ -5,21 +5,20 @@ Este módulo centraliza la exportación de los esquemas Pydantic
 para facilitar su importación en otras partes de la aplicación.
 """
 
-from .user_schema import (
-    UserResponse,
-    UserListResponse,
-    CreateUserRequest,
-    UpdateUserStatusRequest,
-    UserStatsResponse,
-)
-
 from .task_schema import (
-    CreateTaskRequest,
-    CreateTaskResponse,
     CompleteTaskRequest,
     CompleteTaskResponse,
-    TaskResponse,
+    CreateTaskRequest,
+    CreateTaskResponse,
     TaskListResponse,
+    TaskResponse,
+)
+from .user_schema import (
+    CreateUserRequest,
+    UpdateUserStatusRequest,
+    UserListResponse,
+    UserResponse,
+    UserStatsResponse,
 )
 
 # Exportar todos los schemas para facilitar las importaciones

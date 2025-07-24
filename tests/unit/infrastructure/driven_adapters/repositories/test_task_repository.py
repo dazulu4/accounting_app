@@ -1,17 +1,17 @@
-import pytest
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 from uuid import uuid4
-from datetime import datetime, timezone
 
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+import pytest
+from sqlalchemy.exc import IntegrityError
 
+from domain.entities.task_entity import TaskDomainException, TaskEntity
+from domain.enums.task_status_enum import TaskPriorityEnum, TaskStatusEnum
 from infrastructure.driven_adapters.repositories.task_repository import (
-    TaskRepository,
-    TaskModelMapper,
     TaskModel,
+    TaskModelMapper,
+    TaskRepository,
 )
-from domain.entities.task_entity import TaskEntity, TaskDomainException
-from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
 
 
 @pytest.fixture

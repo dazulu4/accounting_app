@@ -1,17 +1,18 @@
+from datetime import datetime, timezone
+from uuid import uuid4
+
 import pytest
 from pydantic import ValidationError
-from uuid import uuid4
-from datetime import datetime, timezone
 
 from application.schemas.task_schema import (
+    CompleteTaskResponse,
     CreateTaskRequest,
     CreateTaskResponse,
-    CompleteTaskResponse,
-    TaskResponse,
     TaskListResponse,
+    TaskResponse,
 )
 from domain.entities.task_entity import TaskEntity
-from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
+from domain.enums.task_status_enum import TaskPriorityEnum, TaskStatusEnum
 
 
 class TestCreateTaskRequest:
@@ -32,12 +33,18 @@ class TestCreateTaskRequest:
     @pytest.mark.parametrize(
         "invalid_data, expected_error",
         [
-            ({"title": " ", "description": "d", "user_id": 1}, "Title cannot be empty"),
+            (
+                {"title": " ", "description": "d", "user_id": 1},
+                "Title cannot be empty",
+            ),
             (
                 {"title": "t", "description": " ", "user_id": 1},
                 "Description cannot be empty",
             ),
-            ({"title": "t", "description": "d", "user_id": 0}, "greater than 0"),
+            (
+                {"title": "t", "description": "d", "user_id": 0},
+                "greater than 0",
+            ),
         ],
     )
     def test_create_task_request_validation_error(self, invalid_data, expected_error):

@@ -13,10 +13,10 @@ Key Features:
 - Auto-generation support with all models
 """
 
-import os
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool, create_engine
+
 from alembic import context
+from sqlalchemy import create_engine, pool
 
 # Import enterprise configuration and models
 from application.config.environment import settings
@@ -32,10 +32,10 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+from infrastructure.driven_adapters.repositories.base import Base
+
 # Import all models for autogenerate support
 # This ensures all models are included in migration detection
-from infrastructure.driven_adapters.repositories.task_repository import TaskModel
-from infrastructure.driven_adapters.repositories.base import Base
 
 # Set target metadata for autogenerate
 target_metadata = Base.metadata
@@ -133,7 +133,11 @@ def run_migrations_online() -> None:
         echo=settings.application.debug,  # Usar el modo debug de la app
         pool_pre_ping=True,  # Verify connections before use
         pool_recycle=3600,  # Recycle connections after 1 hour
-        connect_args={"charset": "utf8mb4", "use_unicode": True, "autocommit": False},
+        connect_args={
+            "charset": "utf8mb4",
+            "use_unicode": True,
+            "autocommit": False,
+        },
     )
 
     try:

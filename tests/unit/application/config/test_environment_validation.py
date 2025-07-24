@@ -4,12 +4,13 @@ Tests for environment configuration validation
 
 import pytest
 from pydantic import ValidationError
+
 from application.config.environment import (
-    DatabaseConfig,
-    ApplicationConfig,
     APIConfig,
-    AWSConfig,
+    ApplicationConfig,
     AppSettings,
+    AWSConfig,
+    DatabaseConfig,
     EnvironmentEnum,
     LogLevelEnum,
 )
@@ -207,7 +208,10 @@ class TestAPIConfigValidation:
     def test_cors_comma_separated_string(self):
         """Test CORS comma-separated string parsing"""
         config = APIConfig(cors_origins="http://localhost:3000,https://example.com")
-        assert config.cors_origins == ["http://localhost:3000", "https://example.com"]
+        assert config.cors_origins == [
+            "http://localhost:3000",
+            "https://example.com",
+        ]
 
 
 class TestAWSConfigValidation:

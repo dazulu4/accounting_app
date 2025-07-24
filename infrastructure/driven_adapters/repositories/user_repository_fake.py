@@ -6,6 +6,7 @@ with enterprise patterns and comprehensive user management.
 """
 
 from typing import List, Optional
+
 from domain.entities.user_entity import UserEntity
 from domain.enums.user_status_enum import UserStatusEnum
 from domain.gateways.user_gateway import UserGateway
@@ -141,7 +142,9 @@ class FakeUserService(UserGateway):
         """Get users by status"""
         filtered_users = [user for user in self._users if user.status == status]
         logger.debug(
-            "getting_users_by_status", status=status.value, count=len(filtered_users)
+            "getting_users_by_status",
+            status=status.value,
+            count=len(filtered_users),
         )
         return filtered_users
 
@@ -183,7 +186,10 @@ class FakeUserService(UserGateway):
             Created user entity
         """
         new_user = UserEntity(
-            user_id=self._next_id, name=name, email=email, status=UserStatusEnum.ACTIVE
+            user_id=self._next_id,
+            name=name,
+            email=email,
+            status=UserStatusEnum.ACTIVE,
         )
 
         self._users.append(new_user)

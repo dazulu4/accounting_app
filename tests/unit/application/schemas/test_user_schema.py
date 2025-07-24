@@ -3,9 +3,9 @@ from pydantic import ValidationError
 
 from application.schemas.user_schema import (
     CreateUserRequest,
-    UserResponse,
-    UserListResponse,
     UpdateUserStatusRequest,
+    UserListResponse,
+    UserResponse,
 )
 from domain.entities.user_entity import UserEntity
 from domain.enums.user_status_enum import UserStatusEnum

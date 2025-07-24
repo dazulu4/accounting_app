@@ -13,27 +13,28 @@ Key Features:
 - Request ID and context tracking
 """
 
-from datetime import datetime, timezone
-from typing import Dict, Any, Tuple, Type, Optional
-from flask import request, current_app
 import uuid
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional, Tuple
+
+from flask import current_app, request
 
 from domain.exceptions.business_exceptions import (
     BusinessException,
-    ValidationException,
-    ResourceNotFoundException,
     BusinessRuleViolationException,
-    TaskStateException,
-    InfrastructureException,
-    UserNotFoundException,
-    TaskNotFoundException,
-    UserNotActiveException,
-    MaxTasksExceededException,
-    TaskAlreadyCompletedException,
-    TaskAlreadyCancelledException,
-    InvalidTaskTransitionException,
     DatabaseException,
     ExternalServiceException,
+    InfrastructureException,
+    InvalidTaskTransitionException,
+    MaxTasksExceededException,
+    ResourceNotFoundException,
+    TaskAlreadyCancelledException,
+    TaskAlreadyCompletedException,
+    TaskNotFoundException,
+    TaskStateException,
+    UserNotActiveException,
+    UserNotFoundException,
+    ValidationException,
 )
 from infrastructure.helpers.logger.logger_config import get_logger
 

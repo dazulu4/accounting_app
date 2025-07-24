@@ -12,12 +12,20 @@ Key Features:
 - Factory methods for entity conversion
 """
 
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
 from uuid import UUID
-from pydantic import BaseModel, Field, field_validator, ConfigDict, field_serializer
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+)
+
 from domain.entities.task_entity import TaskEntity
-from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
+from domain.enums.task_status_enum import TaskPriorityEnum, TaskStatusEnum
 
 
 class CreateTaskRequest(BaseModel):
@@ -32,7 +40,10 @@ class CreateTaskRequest(BaseModel):
         ..., min_length=1, max_length=200, description="Task title or summary"
     )
     description: str = Field(
-        ..., min_length=1, max_length=2000, description="Detailed task description"
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="Detailed task description",
     )
     user_id: int = Field(..., gt=0, description="ID of the user assigned to this task")
     priority: Optional[TaskPriorityEnum] = Field(
@@ -80,7 +91,7 @@ class CreateTaskResponse(BaseModel):
     status: str = Field(..., description="Current task status")
     priority: str = Field(..., description="Task priority")
     created_at: datetime = Field(..., description="Task creation timestamp")
-    updated_at: datetime = Field(..., description="Last update timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
     completed_at: Optional[datetime] = Field(
         None, description="Task completion timestamp"
     )
@@ -146,8 +157,10 @@ class CompleteTaskResponse(BaseModel):
     status: str = Field(..., description="Task status (should be 'completed')")
     priority: str = Field(..., description="Task priority")
     created_at: datetime = Field(..., description="Task creation timestamp")
-    updated_at: datetime = Field(..., description="Last update timestamp")
-    completed_at: datetime = Field(..., description="Task completion timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
+    completed_at: Optional[datetime] = Field(
+        None, description="Task completion timestamp"
+    )
 
     @classmethod
     def from_entity(cls, task: TaskEntity) -> "CompleteTaskResponse":
@@ -194,7 +207,7 @@ class TaskResponse(BaseModel):
     status: str = Field(..., description="Current task status")
     priority: str = Field(..., description="Task priority")
     created_at: datetime = Field(..., description="Task creation timestamp")
-    updated_at: datetime = Field(..., description="Last update timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
     completed_at: Optional[datetime] = Field(
         None, description="Task completion timestamp"
     )

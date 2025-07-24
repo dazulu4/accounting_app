@@ -13,21 +13,21 @@ Key Features:
 """
 
 import time
-import uuid
-from typing import Dict, Any, Optional
-from flask import Flask, request, g, current_app
-from werkzeug.exceptions import HTTPException
 
+from flask import Flask
+
+from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler
 from infrastructure.helpers.logger.logger_config import (
-    get_logger,
-    get_request_logger,
-    get_performance_logger,
-    get_security_logger,
     generate_request_id,
+    get_logger,
+    get_performance_logger,
+    get_request_logger,
+    get_security_logger,
     logging_context,
 )
-from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler
-from infrastructure.helpers.middleware.rate_limit_middleware import RateLimitMiddleware
+from infrastructure.helpers.middleware.rate_limit_middleware import (
+    RateLimitMiddleware,
+)
 
 
 class LoggingMiddleware:

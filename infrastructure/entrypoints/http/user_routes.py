@@ -11,14 +11,13 @@ Key Features:
 - Strategic logging at endpoint level
 """
 
-from flask import Blueprint, jsonify, current_app, request
-from typing import List
+from flask import Blueprint, current_app, jsonify, request
 
-from application.schemas.user_schema import UserListResponse
 from application.schemas.task_schema import TaskListResponse
+from application.schemas.user_schema import UserListResponse
 from domain.exceptions.business_exceptions import UserNotFoundException
 from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler
-from infrastructure.helpers.logger.logger_config import get_logger, logging_context
+from infrastructure.helpers.logger.logger_config import get_logger
 
 # Crear un Blueprint para las rutas de usuarios
 user_blueprint = Blueprint("users", __name__)
@@ -118,7 +117,9 @@ def list_tasks_by_user(user_id: int):
 
     except UserNotFoundException as e:
         logger.warning(
-            "list_tasks_by_user_not_found", request_id=request_id, user_id=user_id
+            "list_tasks_by_user_not_found",
+            request_id=request_id,
+            user_id=user_id,
         )
         response_data, status_code = HTTPErrorHandler.handle_exception(e)
         return jsonify(response_data), status_code

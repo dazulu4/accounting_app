@@ -12,19 +12,18 @@ Key Features:
 - Enterprise exception handling
 """
 
-from uuid import UUID
-from datetime import datetime
 import logging
-from typing import Optional
 
-from application.schemas.task_schema import CompleteTaskRequest, CompleteTaskResponse
-from domain.gateways.task_gateway import TaskGateway
+from application.schemas.task_schema import (
+    CompleteTaskRequest,
+    CompleteTaskResponse,
+)
 from domain.entities.task_entity import (
-    TaskEntity,
-    TaskStateTransitionException,
     TaskAlreadyCompletedException,
+    TaskStateTransitionException,
 )
 from domain.exceptions.business_exceptions import TaskNotFoundException
+from domain.gateways.task_gateway import TaskGateway
 from infrastructure.helpers.database.unit_of_work import UnitOfWork
 
 
@@ -43,7 +42,8 @@ class CompleteTaskUseCase:
         Execute the use case.
         """
         self._logger.info(
-            "Starting task completion use case", extra={"task_id": str(command.task_id)}
+            "Starting task completion use case",
+            extra={"task_id": str(command.task_id)},
         )
 
         try:
@@ -52,7 +52,8 @@ class CompleteTaskUseCase:
 
                 if not task:
                     self._logger.warning(
-                        "Task not found", extra={"task_id": str(command.task_id)}
+                        "Task not found",
+                        extra={"task_id": str(command.task_id)},
                     )
                     raise TaskNotFoundException(command.task_id)
 
@@ -63,7 +64,8 @@ class CompleteTaskUseCase:
                 self.uow.commit()
 
                 self._logger.info(
-                    "Task completed successfully", extra={"task_id": str(task.task_id)}
+                    "Task completed successfully",
+                    extra={"task_id": str(task.task_id)},
                 )
 
                 return CompleteTaskResponse.from_entity(task)

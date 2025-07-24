@@ -1,14 +1,13 @@
-import pytest
 from unittest.mock import MagicMock
 from uuid import uuid4
 
-from domain.usecases.list_tasks_by_user_use_case import ListTasksByUserUseCase
+import pytest
+
 from domain.entities.task_entity import TaskEntity
 from domain.entities.user_entity import UserEntity
 from domain.enums.task_status_enum import TaskStatusEnum
 from domain.exceptions.business_exceptions import UserNotFoundException
-from domain.gateways.task_gateway import TaskGateway
-from domain.gateways.user_gateway import UserGateway
+from domain.usecases.list_tasks_by_user_use_case import ListTasksByUserUseCase
 
 
 class TestListTasksByUserUseCase:
@@ -23,7 +22,10 @@ class TestListTasksByUserUseCase:
         # Arrange
         user_id = 1
         user = UserEntity(
-            user_id=user_id, name="Test User", email="test@test.com", status="active"
+            user_id=user_id,
+            name="Test User",
+            email="test@test.com",
+            status="active",
         )
         tasks = [
             TaskEntity(

@@ -6,12 +6,10 @@ with validation and business logic encapsulated within the entity.
 """
 
 from __future__ import annotations
-import re
-from pydantic import BaseModel, Field, EmailStr, field_validator
-from datetime import datetime
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from ..enums.user_status_enum import UserStatusEnum
-from ..exceptions.business_exceptions import UserValidationException
 
 
 class UserEntity(BaseModel):
@@ -57,7 +55,7 @@ class UserEntity(BaseModel):
 
     def change_email(self, new_email: str):
         """Changes the user's email after validation."""
-        from pydantic import TypeAdapter, EmailStr, ValidationError
+        from pydantic import EmailStr, TypeAdapter, ValidationError
 
         try:
             validated_email = TypeAdapter(EmailStr).validate_python(new_email)

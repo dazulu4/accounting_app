@@ -17,17 +17,19 @@ Key Features:
 
 import time
 from datetime import datetime, timezone
+from typing import Any, Dict
 
-from flask import Flask, jsonify, request, g
+from flask import Flask, jsonify, request
 from flask_cors import CORS
-from typing import Dict, Any
 
-from infrastructure.entrypoints.http import task_routes, user_routes
-from application.config.environment import settings, EnvironmentEnum
+from application.config.environment import EnvironmentEnum, settings
 from application.container import container
+from infrastructure.entrypoints.http import task_routes, user_routes
 from infrastructure.helpers.database.connection import database_connection
-from infrastructure.helpers.logger.logger_config import LoggerConfig, get_logger
-from infrastructure.helpers.middleware.http_middleware import configure_middleware_stack
+from infrastructure.helpers.logger.logger_config import get_logger
+from infrastructure.helpers.middleware.http_middleware import (
+    configure_middleware_stack,
+)
 
 # Initialize structured logger
 logger = get_logger(__name__)
@@ -442,5 +444,7 @@ if __name__ == "__main__":
         warnings.filterwarnings("ignore", message="This is a development server")
 
     app.run(
-        host=settings.api.host, port=settings.api.port, debug=settings.application.debug
+        host=settings.api.host,
+        port=settings.api.port,
+        debug=settings.application.debug,
     )

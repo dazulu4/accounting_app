@@ -12,16 +12,16 @@ Key Features:
 - I18n-ready error messages
 """
 
-from typing import Optional, Dict, Any
 from enum import Enum
+from typing import Any, Dict, Optional
 
 
 class ErrorCodeEnum(str, Enum):
     """
     Enumeration of business error codes
 
-    These codes provide stable identifiers for different types of business errors
-    that can be used by external systems and for internationalization.
+    These codes provide stable identifiers for different types of business
+    errors that can be used by external systems and for internationalization.
     """
 
     # Generic errors
@@ -143,13 +143,9 @@ class ValidationException(BusinessException):
 class TaskValidationException(ValidationException):
     """Raised when task data validation fails"""
 
-    pass
-
 
 class UserValidationException(ValidationException):
     """Raised when user data validation fails"""
-
-    pass
 
 
 # =============================================================================
@@ -161,14 +157,20 @@ class ResourceNotFoundException(BusinessException):
     """Base class for resource not found errors"""
 
     def __init__(
-        self, resource_type: str, resource_id: Any, message: Optional[str] = None
+        self,
+        resource_type: str,
+        resource_id: Any,
+        message: Optional[str] = None,
     ):
         default_message = f"{resource_type} with ID '{resource_id}' not found"
         super().__init__(
             message=message or default_message,
             error_code=ErrorCodeEnum.RESOURCE_NOT_FOUND,
             http_status_code=404,
-            details={"resource_type": resource_type, "resource_id": str(resource_id)},
+            details={
+                "resource_type": resource_type,
+                "resource_id": str(resource_id),
+            },
         )
 
 
@@ -205,7 +207,10 @@ class BusinessRuleViolationException(BusinessException):
     """Base class for business rule violations"""
 
     def __init__(
-        self, message: str, rule_name: str, details: Optional[Dict[str, Any]] = None
+        self,
+        message: str,
+        rule_name: str,
+        details: Optional[Dict[str, Any]] = None,
     ):
         business_details = details or {}
         business_details["violated_rule"] = rule_name

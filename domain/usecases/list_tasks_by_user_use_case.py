@@ -14,12 +14,11 @@ Key Features:
 """
 
 import logging
-from typing import List
 
-from application.schemas.task_schema import TaskResponse, TaskListResponse
+from application.schemas.task_schema import TaskListResponse
+from domain.exceptions.business_exceptions import UserNotFoundException
 from domain.gateways.task_gateway import TaskGateway
 from domain.gateways.user_gateway import UserGateway
-from domain.exceptions.business_exceptions import UserNotFoundException
 from infrastructure.helpers.database.unit_of_work import UnitOfWork
 
 
@@ -60,7 +59,8 @@ class ListTasksByUserUseCase:
             user = self.user_gateway.find_user_by_id(user_id)
             if not user:
                 self._logger.warning(
-                    "user_not_found_in_list_tasks_use_case", extra={"user_id": user_id}
+                    "user_not_found_in_list_tasks_use_case",
+                    extra={"user_id": user_id},
                 )
                 raise UserNotFoundException(user_id)
 

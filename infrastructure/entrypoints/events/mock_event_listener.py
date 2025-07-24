@@ -40,7 +40,10 @@ class MockEventListener:
         print(f"Mock Event: Task {task_id} completed by user {user_id}")
 
     def handle_user_status_change(
-        self, user_id: int, old_status: UserStatusEnum, new_status: UserStatusEnum
+        self,
+        user_id: int,
+        old_status: UserStatusEnum,
+        new_status: UserStatusEnum,
     ) -> None:
         """
         Handle user status change event

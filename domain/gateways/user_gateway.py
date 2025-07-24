@@ -15,11 +15,9 @@ Key Features:
 
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from uuid import UUID
 
-# Note: We'll need to create UserEntity later, for now using a placeholder
-# from domain.entities.user_entity import UserEntity
-from domain.enums.task_status_enum import UserStatusEnum
+from domain.entities.user_entity import UserEntity
+from domain.enums.user_status_enum import UserStatusEnum
 
 
 class UserGateway(ABC):
@@ -45,7 +43,6 @@ class UserGateway(ABC):
         Raises:
             Exception: If database operation fails
         """
-        pass
 
     @abstractmethod
     def find_all_users(self) -> List["UserEntity"]:
@@ -58,7 +55,6 @@ class UserGateway(ABC):
         Raises:
             Exception: If database operation fails
         """
-        pass
 
     @abstractmethod
     def find_users_by_status(self, status: UserStatusEnum) -> List["UserEntity"]:
@@ -74,7 +70,6 @@ class UserGateway(ABC):
         Raises:
             Exception: If database operation fails
         """
-        pass
 
     @abstractmethod
     def find_active_users(self) -> List["UserEntity"]:
@@ -87,7 +82,6 @@ class UserGateway(ABC):
         Raises:
             Exception: If database operation fails
         """
-        pass
 
     @abstractmethod
     def save_user(self, user: "UserEntity") -> None:
@@ -100,7 +94,6 @@ class UserGateway(ABC):
         Raises:
             Exception: If save operation fails
         """
-        pass
 
     @abstractmethod
     def delete_user(self, user_id: int) -> bool:
@@ -116,7 +109,6 @@ class UserGateway(ABC):
         Raises:
             Exception: If database operation fails
         """
-        pass
 
     @abstractmethod
     def user_exists(self, user_id: int) -> bool:
@@ -132,7 +124,6 @@ class UserGateway(ABC):
         Raises:
             Exception: If database operation fails
         """
-        pass
 
     @abstractmethod
     def count_users_by_status(self, status: UserStatusEnum) -> int:
@@ -148,4 +139,3 @@ class UserGateway(ABC):
         Raises:
             Exception: If database operation fails
         """
-        pass

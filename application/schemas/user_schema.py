@@ -12,12 +12,12 @@ Key Features:
 - Factory methods for entity conversion
 """
 
-from typing import List, Optional
-from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
-from datetime import datetime
+from typing import List
 
-from domain.enums.user_status_enum import UserStatusEnum
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
 from domain.entities.user_entity import UserEntity
+from domain.enums.user_status_enum import UserStatusEnum
 
 
 class UserResponse(BaseModel):
@@ -150,7 +150,10 @@ class CreateUserRequest(BaseModel):
 
     model_config = ConfigDict(
         json_schema_extra={
-            "example": {"name": "Juan Pérez", "email": "juan.perez@company.com"}
+            "example": {
+                "name": "Juan Pérez",
+                "email": "juan.perez@company.com",
+            }
         }
     )
 
@@ -166,7 +169,8 @@ class UpdateUserStatusRequest(BaseModel):
     status: UserStatusEnum = Field(..., description="New user status")
 
     model_config = ConfigDict(
-        use_enum_values=True, json_schema_extra={"example": {"status": "active"}}
+        use_enum_values=True,
+        json_schema_extra={"example": {"status": "active"}},
     )
 
 

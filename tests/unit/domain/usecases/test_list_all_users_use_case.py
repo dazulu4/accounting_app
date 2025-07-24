@@ -1,10 +1,8 @@
-import pytest
 from unittest.mock import MagicMock
 
-from domain.usecases.list_all_users_use_case import ListAllUsersUseCase
 from domain.entities.user_entity import UserEntity
 from domain.enums.user_status_enum import UserStatusEnum
-from domain.gateways.user_gateway import UserGateway
+from domain.usecases.list_all_users_use_case import ListAllUsersUseCase
 
 
 class TestListAllUsersUseCase:

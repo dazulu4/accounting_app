@@ -13,15 +13,16 @@ Key Features:
 - Health check capabilities
 """
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, Session, declarative_base
-from sqlalchemy.engine import Engine
-from sqlalchemy.pool import QueuePool
-from typing import Generator, Optional
 import logging
 from contextlib import contextmanager
+from typing import Generator, Optional
 
-from application.config.environment import settings, DatabaseConfig
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
+from sqlalchemy.pool import QueuePool
+
+from application.config.environment import DatabaseConfig, settings
 from domain.constants.task_constants import TransactionConstants
 
 # Configure logger

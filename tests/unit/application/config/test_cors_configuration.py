@@ -13,8 +13,8 @@ from pydantic import ValidationError
 
 from application.config.environment import (
     APIConfig,
-    AppSettings,
     ApplicationConfig,
+    AppSettings,
     EnvironmentEnum,
 )
 
@@ -54,7 +54,10 @@ class TestCORSConfiguration:
     def test_production_cors_accepts_valid_https_origins(self):
         """Test that production environment accepts valid HTTPS origins"""
         config = APIConfig(
-            cors_origins=["https://app.company.com", "https://admin.company.com"]
+            cors_origins=[
+                "https://app.company.com",
+                "https://admin.company.com",
+            ]
         )
         assert config.cors_origins == [
             "https://app.company.com",
@@ -176,7 +179,10 @@ class TestCORSEnvironmentSpecific:
         config = AppSettings(
             application=ApplicationConfig(environment=EnvironmentEnum.PRODUCTION),
             api=APIConfig(
-                cors_origins=["https://app.company.com", "https://admin.company.com"],
+                cors_origins=[
+                    "https://app.company.com",
+                    "https://admin.company.com",
+                ],
                 cors_methods=["GET", "POST", "PUT", "DELETE"],
                 cors_headers=["Content-Type", "Authorization"],
                 cors_expose_headers=["Content-Type", "X-Request-ID"],
@@ -191,7 +197,10 @@ class TestCORSEnvironmentSpecific:
         ]
         assert config.api.cors_methods == ["GET", "POST", "PUT", "DELETE"]
         assert config.api.cors_headers == ["Content-Type", "Authorization"]
-        assert config.api.cors_expose_headers == ["Content-Type", "X-Request-ID"]
+        assert config.api.cors_expose_headers == [
+            "Content-Type",
+            "X-Request-ID",
+        ]
         assert config.api.cors_supports_credentials is True
         assert config.api.cors_max_age == 3600
 

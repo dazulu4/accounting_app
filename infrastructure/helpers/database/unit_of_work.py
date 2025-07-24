@@ -14,17 +14,17 @@ Key Features:
 - ACID compliance
 """
 
-from typing import Optional, Generator, Type, TypeVar
-from contextlib import contextmanager
 import logging
+from contextlib import contextmanager
 from time import sleep
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError, TimeoutError, DisconnectionError
-from sqlalchemy import text
+from typing import Generator, Optional, TypeVar
 
-from infrastructure.helpers.database.connection import database_connection
+from sqlalchemy import text
+from sqlalchemy.exc import DisconnectionError, TimeoutError
+from sqlalchemy.orm import Session
+
 from domain.constants.task_constants import TransactionConstants
-from domain.entities.task_entity import TaskDomainException
+from infrastructure.helpers.database.connection import database_connection
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -35,19 +35,13 @@ T = TypeVar("T")
 class UnitOfWorkException(Exception):
     """Base exception for Unit of Work operations"""
 
-    pass
-
 
 class TransactionTimeoutException(UnitOfWorkException):
     """Raised when transaction exceeds timeout"""
 
-    pass
-
 
 class TransactionRetryExhaustedException(UnitOfWorkException):
     """Raised when all retry attempts are exhausted"""
-
-    pass
 
 
 class UnitOfWork:
@@ -114,7 +108,10 @@ class UnitOfWork:
 
             logger.debug(
                 "Transaction started",
-                extra={"timeout": self._timeout, "session_id": id(self._session)},
+                extra={
+                    "timeout": self._timeout,
+                    "session_id": id(self._session),
+                },
             )
 
         except Exception as e:
@@ -144,7 +141,8 @@ class UnitOfWork:
 
         except Exception as e:
             logger.warning(
-                "Failed to configure transaction settings", extra={"error": str(e)}
+                "Failed to configure transaction settings",
+                extra={"error": str(e)},
             )
             # Don't fail transaction start for configuration issues
 
@@ -191,7 +189,8 @@ class UnitOfWork:
         try:
             self._session.rollback()
             logger.debug(
-                "Transaction rolled back", extra={"session_id": id(self._session)}
+                "Transaction rolled back",
+                extra={"session_id": id(self._session)},
             )
 
         except Exception as e:
@@ -261,7 +260,7 @@ class UnitOfWork:
                 logger.info(
                     "Rolling back transaction due to exception",
                     extra={
-                        "exception_type": exc_type.__name__ if exc_type else None,
+                        "exception_type": (exc_type.__name__ if exc_type else None),
                         "exception_message": str(exc_val) if exc_val else None,
                     },
                 )
@@ -319,7 +318,8 @@ class UnitOfWork:
             except Exception as e:
                 # Non-transient error, don't retry
                 logger.error(
-                    "Non-transient error in transaction", extra={"error": str(e)}
+                    "Non-transient error in transaction",
+                    extra={"error": str(e)},
                 )
                 raise
 

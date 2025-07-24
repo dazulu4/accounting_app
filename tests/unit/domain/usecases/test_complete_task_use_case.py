@@ -12,21 +12,24 @@ Test Categories:
 - Performance validation
 """
 
-import pytest
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 from uuid import UUID
-from datetime import datetime, timezone
 
-from domain.usecases.complete_task_use_case import CompleteTaskUseCase
+import pytest
+
+from application.schemas.task_schema import (
+    CompleteTaskRequest,
+    CompleteTaskResponse,
+)
 from domain.entities.task_entity import (
-    TaskEntity,
     TaskAlreadyCompletedException,
+    TaskEntity,
     TaskStateTransitionException,
 )
 from domain.enums.task_status_enum import TaskStatusEnum
 from domain.exceptions.business_exceptions import TaskNotFoundException
-from domain.gateways.task_gateway import TaskGateway
-from application.schemas.task_schema import CompleteTaskRequest, CompleteTaskResponse
+from domain.usecases.complete_task_use_case import CompleteTaskUseCase
 
 
 class TestCompleteTaskUseCase:

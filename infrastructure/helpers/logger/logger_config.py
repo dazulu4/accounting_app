@@ -14,11 +14,12 @@ Key Features:
 
 import logging
 import logging.config
-import structlog
 import uuid
 from contextlib import contextmanager
-from typing import Any, Dict, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
+import structlog
 
 from application.config.environment import settings
 

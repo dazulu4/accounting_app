@@ -2,21 +2,21 @@
 Tests for error handlers
 """
 
-import pytest
 from unittest.mock import Mock, patch
-from datetime import datetime, timezone
 
-from infrastructure.helpers.errors.error_handlers import (
-    HTTPErrorHandler,
-    ErrorResponseBuilder,
-    create_validation_error_response,
-    create_not_found_error_response,
-)
+import pytest
+
 from domain.exceptions.business_exceptions import (
-    UserNotFoundException,
     TaskNotFoundException,
-    ValidationException,
     UserNotActiveException,
+    UserNotFoundException,
+    ValidationException,
+)
+from infrastructure.helpers.errors.error_handlers import (
+    ErrorResponseBuilder,
+    HTTPErrorHandler,
+    create_not_found_error_response,
+    create_validation_error_response,
 )
 
 
@@ -34,7 +34,8 @@ class TestHTTPErrorHandler:
         mock_request.request_id = "test-request-id"
 
         with patch(
-            "infrastructure.helpers.errors.error_handlers.request", mock_request
+            "infrastructure.helpers.errors.error_handlers.request",
+            mock_request,
         ):
             response_data, status_code = HTTPErrorHandler.handle_exception(exception)
 
@@ -60,7 +61,8 @@ class TestHTTPErrorHandler:
         mock_request.request_id = "test-request-id"
 
         with patch(
-            "infrastructure.helpers.errors.error_handlers.request", mock_request
+            "infrastructure.helpers.errors.error_handlers.request",
+            mock_request,
         ):
             response_data, status_code = HTTPErrorHandler.handle_exception(exception)
 
@@ -99,7 +101,8 @@ class TestHTTPErrorHandler:
         delattr(mock_request, "request_id")
 
         with patch(
-            "infrastructure.helpers.errors.error_handlers.request", mock_request
+            "infrastructure.helpers.errors.error_handlers.request",
+            mock_request,
         ):
             response_data, status_code = HTTPErrorHandler.handle_exception(exception)
 
@@ -120,7 +123,8 @@ class TestHTTPErrorHandler:
         mock_request.request_id = "test-request-id"
 
         with patch(
-            "infrastructure.helpers.errors.error_handlers.request", mock_request
+            "infrastructure.helpers.errors.error_handlers.request",
+            mock_request,
         ):
             response_data, status_code = HTTPErrorHandler.handle_exception(exception)
 
@@ -142,7 +146,8 @@ class TestHTTPErrorHandler:
         mock_request.request_id = "test-request-id"
 
         with patch(
-            "infrastructure.helpers.errors.error_handlers.request", mock_request
+            "infrastructure.helpers.errors.error_handlers.request",
+            mock_request,
         ):
             # Mock _should_include_details to return False (production mode)
             with patch.object(
@@ -172,7 +177,8 @@ class TestHTTPErrorHandler:
         mock_request.request_id = "test-request-id"
 
         with patch(
-            "infrastructure.helpers.errors.error_handlers.request", mock_request
+            "infrastructure.helpers.errors.error_handlers.request",
+            mock_request,
         ):
             # Mock _should_include_details to return True (development mode)
             with patch.object(
@@ -204,7 +210,8 @@ class TestErrorResponseBuilder:
         mock_request.request_id = "test-request-id"
 
         with patch(
-            "infrastructure.helpers.errors.error_handlers.request", mock_request
+            "infrastructure.helpers.errors.error_handlers.request",
+            mock_request,
         ):
             builder = ErrorResponseBuilder()
             response_data, status_code = (
@@ -242,7 +249,8 @@ class TestErrorResponseBuilder:
         mock_request.request_id = "test-request-id"
 
         with patch(
-            "infrastructure.helpers.errors.error_handlers.request", mock_request
+            "infrastructure.helpers.errors.error_handlers.request",
+            mock_request,
         ):
             builder = ErrorResponseBuilder()
             response_data, status_code = (
@@ -267,7 +275,8 @@ class TestErrorResponseHelpers:
         mock_request.request_id = "test-request-id"
 
         with patch(
-            "infrastructure.helpers.errors.error_handlers.request", mock_request
+            "infrastructure.helpers.errors.error_handlers.request",
+            mock_request,
         ):
             field_errors = {
                 "title": "Title is required",
@@ -291,7 +300,8 @@ class TestErrorResponseHelpers:
         mock_request.request_id = "test-request-id"
 
         with patch(
-            "infrastructure.helpers.errors.error_handlers.request", mock_request
+            "infrastructure.helpers.errors.error_handlers.request",
+            mock_request,
         ):
             response_data, status_code = create_not_found_error_response("User", 123)
 

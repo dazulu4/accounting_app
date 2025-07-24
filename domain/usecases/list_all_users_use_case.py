@@ -16,9 +16,9 @@ import logging
 from typing import List, Optional
 
 from domain.entities.user_entity import UserEntity
-from domain.gateways.user_gateway import UserGateway
 from domain.enums.user_status_enum import UserStatusEnum
 from domain.exceptions.business_exceptions import ValidationException
+from domain.gateways.user_gateway import UserGateway
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class ListAllUsersUseCase:
         """
         logger.info(
             "list_all_users_started",
-            extra={"status_filter": status_filter.value if status_filter else "all"},
+            extra={"status_filter": (status_filter.value if status_filter else "all")},
         )
 
         # Obtener usuarios del gateway (repositorio)
@@ -205,7 +205,7 @@ class ListAllUsersUseCase:
             "users": users_data,
             "metadata": {
                 "returned_count": len(users_data),
-                "status_filter": status_filter.value if status_filter else None,
+                "status_filter": (status_filter.value if status_filter else None),
                 "statistics": stats,
             },
             "success": True,
@@ -247,7 +247,8 @@ class GetUserStatsUseCase:
             stats = self._calculate_comprehensive_statistics(all_users)
 
             logger.info(
-                "get_user_stats_completed", extra={"total_users": stats["total_users"]}
+                "get_user_stats_completed",
+                extra={"total_users": stats["total_users"]},
             )
 
             return stats
@@ -255,7 +256,10 @@ class GetUserStatsUseCase:
         except Exception as e:
             logger.error(
                 "get_user_stats_failed",
-                extra={"error_type": type(e).__name__, "error_message": str(e)},
+                extra={
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                },
             )
             raise
 

@@ -10,8 +10,8 @@ Components:
 
 from .http_middleware import (
     ErrorHandlingMiddleware,
-    PerformanceMonitoringMiddleware,
     LoggingMiddleware,
+    PerformanceMonitoringMiddleware,
     SecurityLoggingMiddleware,
     configure_middleware_stack,
 )

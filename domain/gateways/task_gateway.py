@@ -41,7 +41,6 @@ class TaskGateway(ABC):
         Raises:
             Exception: If save operation fails
         """
-        pass
 
     @abstractmethod
     def find_task_by_id(self, task_id: UUID) -> Optional[TaskEntity]:
@@ -57,7 +56,6 @@ class TaskGateway(ABC):
         Raises:
             Exception: If database operation fails
         """
-        pass
 
     @abstractmethod
     def find_tasks_by_user_id(self, user_id: int) -> List[TaskEntity]:
@@ -73,7 +71,6 @@ class TaskGateway(ABC):
         Raises:
             Exception: If database operation fails
         """
-        pass
 
     @abstractmethod
     def find_tasks_by_status(self, status: TaskStatusEnum) -> List[TaskEntity]:
@@ -89,7 +86,6 @@ class TaskGateway(ABC):
         Raises:
             Exception: If database operation fails
         """
-        pass
 
     @abstractmethod
     def delete_task(self, task_id: UUID) -> bool:
@@ -105,7 +101,6 @@ class TaskGateway(ABC):
         Raises:
             Exception: If database operation fails
         """
-        pass
 
     @abstractmethod
     def count_tasks_by_user(self, user_id: int) -> int:
@@ -123,4 +118,3 @@ class TaskGateway(ABC):
         Raises:
             Exception: If database operation fails
         """
-        pass

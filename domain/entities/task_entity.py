@@ -1,8 +1,9 @@
 """
 Task Entity - Domain Model
 
-This module contains the core Task entity following Domain-Driven Design principles
-with enterprise naming conventions, state transitions, and business rule validation.
+This module contains the core Task entity following Domain-Driven Design
+principles with enterprise naming conventions, state transitions, and business
+rule validation.
 
 Key Features:
 - English naming conventions throughout
@@ -17,38 +18,31 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
-from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
-from domain.constants.task_constants import TaskConstants, TaskValidationMessages
+from domain.constants.task_constants import (
+    TaskConstants,
+    TaskValidationMessages,
+)
+from domain.enums.task_status_enum import TaskPriorityEnum, TaskStatusEnum
 
 
 class TaskDomainException(Exception):
     """Base exception for task domain errors"""
 
-    pass
-
 
 class TaskValidationException(TaskDomainException):
     """Raised when task validation fails"""
-
-    pass
 
 
 class TaskStateTransitionException(TaskDomainException):
     """Raised when invalid state transition is attempted"""
 
-    pass
-
 
 class TaskAlreadyCompletedException(TaskDomainException):
     """Raised when trying to modify a completed task"""
 
-    pass
-
 
 class TaskBusinessRuleException(TaskDomainException):
     """Raised when business rule validation fails"""
-
-    pass
 
 
 @dataclass
@@ -344,7 +338,7 @@ class TaskEntity:
             "completed_at": (
                 self.completed_at.isoformat() if self.completed_at else None
             ),
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "updated_at": (self.updated_at.isoformat() if self.updated_at else None),
             "is_active": self.is_active(),
             "is_completed": self.is_completed(),
             "age_in_days": self.get_age_in_days(),

@@ -1,14 +1,13 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
-from datetime import datetime, timezone, timedelta
-from uuid import uuid4
 
 from domain.entities.task_entity import (
+    TaskAlreadyCompletedException,
     TaskEntity,
     TaskValidationException,
-    TaskStateTransitionException,
-    TaskAlreadyCompletedException,
 )
-from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
+from domain.enums.task_status_enum import TaskPriorityEnum, TaskStatusEnum
 
 
 class TestTaskEntity:

@@ -12,20 +12,24 @@ Key Features:
 - Strategic logging at endpoint level
 """
 
-from flask import Blueprint, request, jsonify, current_app
 from uuid import UUID
+
+from flask import Blueprint, current_app, jsonify, request
 from pydantic import ValidationError
 
-from application.schemas.task_schema import CreateTaskRequest, CompleteTaskRequest
+from application.schemas.task_schema import (
+    CompleteTaskRequest,
+    CreateTaskRequest,
+)
 from domain.exceptions.business_exceptions import (
-    UserNotFoundException,
-    UserNotActiveException,
-    TaskNotFoundException,
     InvalidTaskTransitionException,
     TaskAlreadyCompletedException,
+    TaskNotFoundException,
+    UserNotActiveException,
+    UserNotFoundException,
 )
 from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler
-from infrastructure.helpers.logger.logger_config import get_logger, logging_context
+from infrastructure.helpers.logger.logger_config import get_logger
 
 # Crear un Blueprint para las rutas de tareas
 task_blueprint = Blueprint("tasks", __name__)
@@ -57,7 +61,7 @@ def create_task():
             "create_task_data_validated",
             request_id=request_id,
             user_id=data.user_id,
-            title=data.title[:50] + "..." if len(data.title) > 50 else data.title,
+            title=(data.title[:50] + "..." if len(data.title) > 50 else data.title),
         )
 
         # Obtener el caso de uso desde el contenedor
@@ -133,7 +137,9 @@ def complete_task(task_id: UUID):
         request_dto = CompleteTaskRequest(task_id=task_id)
 
         logger.info(
-            "complete_task_data_validated", request_id=request_id, task_id=str(task_id)
+            "complete_task_data_validated",
+            request_id=request_id,
+            task_id=str(task_id),
         )
 
         # Obtener el caso de uso desde el contenedor
@@ -165,7 +171,9 @@ def complete_task(task_id: UUID):
 
     except TaskNotFoundException as e:
         logger.warning(
-            "complete_task_not_found", request_id=request_id, task_id=str(task_id)
+            "complete_task_not_found",
+            request_id=request_id,
+            task_id=str(task_id),
         )
         response_data, status_code = HTTPErrorHandler.handle_exception(e)
         return jsonify(response_data), status_code

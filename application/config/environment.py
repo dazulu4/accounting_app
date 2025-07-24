@@ -12,13 +12,13 @@ Key Features:
 - AWS integration ready
 """
 
-from typing import List, Optional, Dict
-from enum import Enum
-from pydantic import Field, field_validator, ConfigDict, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic.types import SecretStr
 import re
-import os
+from enum import Enum
+from typing import Dict, List, Optional
+
+from pydantic import ConfigDict, Field, field_validator, model_validator
+from pydantic.types import SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class EnvironmentEnum(str, Enum):
@@ -73,13 +73,15 @@ class DatabaseConfig(BaseSettings):
         """Validate database host"""
         if not v or not v.strip():
             raise ValueError(
-                "Database host cannot be empty. Please set DATABASE_HOST environment variable."
+                "Database host cannot be empty. Please set DATABASE_HOST "
+                "environment variable."
             )
         host = v.strip()
         # Basic host validation (IP or hostname)
         if not re.match(r"^[a-zA-Z0-9.-]+$", host) and host != "localhost":
             raise ValueError(
-                f"Invalid database host format: {host}. Must be a valid hostname or IP address."
+                f"Invalid database host format: {host}. Must be a valid "
+                "hostname or IP address."
             )
         return host
 
@@ -88,16 +90,18 @@ class DatabaseConfig(BaseSettings):
         """Validate database name"""
         if not v or not v.strip():
             raise ValueError(
-                "Database name cannot be empty. Please set DATABASE_NAME environment variable."
+                "Database name cannot be empty. Please set DATABASE_NAME "
+                "environment variable."
             )
         name = v.strip()
         if len(name) > 64:  # MySQL limit
             raise ValueError(
-                f"Database name too long: {name}. Maximum length is 64 characters."
+                f"Database name too long: {name}. Maximum length is 64 " "characters."
             )
         if not re.match(r"^[a-zA-Z0-9_]+$", name):
             raise ValueError(
-                f"Invalid database name: {name}. Must contain only letters, numbers, and underscores."
+                f"Invalid database name: {name}. Must contain only letters, "
+                "numbers, and underscores."
             )
         return name
 
@@ -106,12 +110,14 @@ class DatabaseConfig(BaseSettings):
         """Validate database username"""
         if not v or not v.strip():
             raise ValueError(
-                "Database username cannot be empty. Please set DATABASE_USER environment variable."
+                "Database username cannot be empty. Please set DATABASE_USER "
+                "environment variable."
             )
         username = v.strip()
         if len(username) > 32:  # MySQL limit
             raise ValueError(
-                f"Database username too long: {username}. Maximum length is 32 characters."
+                f"Database username too long: {username}. Maximum length is "
+                "32 characters."
             )
         return username
 
@@ -120,7 +126,8 @@ class DatabaseConfig(BaseSettings):
         """Validate database password"""
         if not v or not v.get_secret_value().strip():
             raise ValueError(
-                "Database password cannot be empty. Please set DATABASE_PASSWORD environment variable."
+                "Database password cannot be empty. Please set "
+                "DATABASE_PASSWORD environment variable."
             )
         return v
 
@@ -136,7 +143,8 @@ class DatabaseConfig(BaseSettings):
     def connection_url_masked(self) -> str:
         """Generate connection URL with masked password for logging"""
         return (
-            f"mysql+pymysql://{self.username}:***@{self.host}:{self.port}/{self.name}"
+            f"mysql+pymysql://{self.username}:***@{self.host}:{self.port}/"
+            f"{self.name}"
         )
 
 
@@ -153,7 +161,8 @@ class ApplicationConfig(BaseSettings):
     """
 
     environment: EnvironmentEnum = Field(
-        default=EnvironmentEnum.DEVELOPMENT, description="Application environment"
+        default=EnvironmentEnum.DEVELOPMENT,
+        description="Application environment",
     )
     debug: bool = Field(default=False, description="Debug mode")
     version: str = Field(default="1.0.0", description="Application version")
@@ -181,13 +190,15 @@ class ApplicationConfig(BaseSettings):
         """Validate version format"""
         if not v or not v.strip():
             raise ValueError(
-                "Application version cannot be empty. Please set APP_VERSION environment variable."
+                "Application version cannot be empty. Please set "
+                "APP_VERSION environment variable."
             )
         version = v.strip()
         # Basic semver validation
         if not re.match(r"^\d+\.\d+\.\d+", version):
             raise ValueError(
-                f"Invalid version format: {version}. Must follow semantic versioning (e.g., 1.0.0)"
+                f"Invalid version format: {version}. Must follow semantic "
+                "versioning (e.g., 1.0.0)"
             )
         return version
 
@@ -250,7 +261,7 @@ class APIConfig(BaseSettings):
         """Validate API host"""
         if not v or not v.strip():
             raise ValueError(
-                "API host cannot be empty. Please set API_HOST environment variable."
+                "API host cannot be empty. Please set API_HOST environment " "variable."
             )
         return v.strip()
 
@@ -287,7 +298,8 @@ class APIConfig(BaseSettings):
             import logging
 
             logging.warning(
-                "Wildcard (*) in CORS origins - ensure this is not used in production"
+                "Wildcard (*) in CORS origins - ensure this is not used in "
+                "production"
             )
 
         return v

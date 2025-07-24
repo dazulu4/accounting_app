@@ -18,13 +18,16 @@ Key Features:
 
 import json
 import time
-from typing import Dict, Any, Optional
-from application.main import create_app
-from application.config.environment import settings
-from infrastructure.helpers.logger.logger_config import get_logger
-from infrastructure.helpers.logger.logger_config import configure_logging
+from typing import Any, Dict, Optional
+
 import structlog.contextvars
-from application.config.environment import EnvironmentEnum
+
+from application.config.environment import EnvironmentEnum, settings
+from application.main import create_app
+from infrastructure.helpers.logger.logger_config import (
+    configure_logging,
+    get_logger,
+)
 
 # Initialize enterprise logger
 logger = get_logger(__name__)
@@ -33,7 +36,8 @@ logger = get_logger(__name__)
 # Esto asegura que todos los logs, incluso los de inicialización,
 # tengan el formato correcto.
 configure_logging(
-    log_level=settings.application.log_level, debug_mode=settings.application.debug
+    log_level=settings.application.log_level,
+    debug_mode=settings.application.debug,
 )
 
 # Create Flask application (cached for performance)

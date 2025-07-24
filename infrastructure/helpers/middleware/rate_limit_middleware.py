@@ -5,11 +5,11 @@ Simple in-memory rate limiting implementation with configurable limits per IP.
 Provides protection against abuse and DoS attacks.
 """
 
-import time
 import json
+import time
 from collections import defaultdict, deque
-from typing import Dict, Deque, Tuple
-from flask import request, g
+from typing import Deque, Dict, Tuple
+
 from infrastructure.helpers.logger.logger_config import get_logger
 
 logger = get_logger(__name__)
@@ -79,7 +79,11 @@ class RateLimitMiddleware:
         path_info = environ.get("PATH_INFO", "")
 
         # Skip rate limiting for health checks
-        if path_info in ["/api/health", "/api/health/detailed", "/api/version"]:
+        if path_info in [
+            "/api/health",
+            "/api/health/detailed",
+            "/api/version",
+        ]:
             return self.app(environ, start_response)
 
         # Get client IP

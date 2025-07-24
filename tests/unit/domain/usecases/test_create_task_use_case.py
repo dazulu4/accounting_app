@@ -11,25 +11,27 @@ Test Categories:
 - Performance and behavior validation
 """
 
-import pytest
-from datetime import datetime, timezone
+from unittest.mock import MagicMock
 from uuid import UUID
-from unittest.mock import MagicMock, patch
 
-from domain.usecases.create_task_use_case import CreateTaskUseCase
-from domain.entities.task_entity import TaskEntity
+import pytest
+
+from application.schemas.task_schema import (
+    CreateTaskRequest,
+    CreateTaskResponse,
+)
 from domain.entities.user_entity import UserEntity
-from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
+from domain.enums.task_status_enum import TaskPriorityEnum
 from domain.enums.user_status_enum import UserStatusEnum
 from domain.exceptions.business_exceptions import (
-    UserNotFoundException,
-    UserNotActiveException,
-    MaxTasksExceededException,
     DatabaseException,
+    MaxTasksExceededException,
+    UserNotActiveException,
+    UserNotFoundException,
 )
 from domain.gateways.task_gateway import TaskGateway
 from domain.gateways.user_gateway import UserGateway
-from application.schemas.task_schema import CreateTaskRequest, CreateTaskResponse
+from domain.usecases.create_task_use_case import CreateTaskUseCase
 
 
 class TestCreateTaskUseCase:

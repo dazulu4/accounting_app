@@ -13,19 +13,20 @@ Key Features:
 - Repository pattern implementation
 """
 
+import logging
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
-from sqlalchemy import String, DateTime, Integer, Text, Index
-from sqlalchemy.orm import Mapped, mapped_column, Session
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from datetime import datetime
-import logging
 
-from infrastructure.helpers.database.connection import Base
-from domain.entities.task_entity import TaskEntity, TaskDomainException
-from domain.enums.task_status_enum import TaskStatusEnum, TaskPriorityEnum
-from domain.gateways.task_gateway import TaskGateway
+from sqlalchemy import DateTime, Index, Integer, String, Text
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import Mapped, Session, mapped_column
+
 from domain.constants.task_constants import TaskDatabaseConstants
+from domain.entities.task_entity import TaskDomainException, TaskEntity
+from domain.enums.task_status_enum import TaskPriorityEnum, TaskStatusEnum
+from domain.gateways.task_gateway import TaskGateway
+from infrastructure.helpers.database.connection import Base
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -338,7 +339,8 @@ class TaskRepository(TaskGateway):
 
             if model is None:
                 logger.debug(
-                    "Task not found for deletion", extra={"task_id": str(task_id)}
+                    "Task not found for deletion",
+                    extra={"task_id": str(task_id)},
                 )
                 return False
 

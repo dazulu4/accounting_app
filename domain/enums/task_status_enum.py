@@ -6,8 +6,7 @@ following finite state machine principles for robust state management.
 """
 
 from enum import Enum
-from typing import List, Dict, Set
-from domain.constants.task_constants import TaskConstants
+from typing import List, Set
 
 
 class TaskStatusEnum(str, Enum):
@@ -141,29 +140,10 @@ class TaskPriorityEnum(str, Enum):
 
     def get_sort_order(self) -> int:
         """Get numeric value for sorting by priority"""
-        priority_order = {self.LOW: 1, self.MEDIUM: 2, self.HIGH: 3, self.URGENT: 4}
+        priority_order = {
+            self.LOW: 1,
+            self.MEDIUM: 2,
+            self.HIGH: 3,
+            self.URGENT: 4,
+        }
         return priority_order.get(self, 2)
-
-
-class UserStatusEnum(str, Enum):
-    """
-    User status enumeration for task assignment validation
-
-    States:
-    - ACTIVE: User can be assigned tasks
-    - INACTIVE: User cannot be assigned new tasks
-    - SUSPENDED: User is temporarily suspended
-    """
-
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    SUSPENDED = "suspended"
-
-    @classmethod
-    def get_assignable_statuses(cls) -> Set[str]:
-        """Get statuses that allow task assignment"""
-        return {cls.ACTIVE}
-
-    def can_be_assigned_tasks(self) -> bool:
-        """Check if user with this status can be assigned tasks"""
-        return self in self.get_assignable_statuses()

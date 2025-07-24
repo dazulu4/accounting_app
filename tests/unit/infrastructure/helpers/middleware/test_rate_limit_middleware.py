@@ -6,10 +6,13 @@ request tracking, and rate limit enforcement.
 """
 
 import time
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, patch
-from flask import Flask, request
-from infrastructure.helpers.middleware.rate_limit_middleware import RateLimitMiddleware
+
+from infrastructure.helpers.middleware.rate_limit_middleware import (
+    RateLimitMiddleware,
+)
 
 
 class TestRateLimitMiddleware:
@@ -177,7 +180,10 @@ class TestRateLimitConfig:
         from application.config.environment import RateLimitConfig
 
         config = RateLimitConfig(
-            enabled=True, requests_per_second=10, window_size_seconds=60, burst_limit=20
+            enabled=True,
+            requests_per_second=10,
+            window_size_seconds=60,
+            burst_limit=20,
         )
         assert config.enabled is True
         assert config.requests_per_second == 10
@@ -186,12 +192,14 @@ class TestRateLimitConfig:
 
     def test_invalid_burst_limit_raises_error(self):
         """Test invalid burst limit raises error"""
-        from application.config.environment import RateLimitConfig
         from pydantic import ValidationError
+
+        from application.config.environment import RateLimitConfig
 
         with pytest.raises(ValidationError) as exc_info:
             RateLimitConfig(
-                requests_per_second=10, burst_limit=5  # Less than requests_per_second
+                requests_per_second=10,
+                burst_limit=5,  # Less than requests_per_second
             )
         assert "Burst limit must be >= requests per second" in str(exc_info.value)
 
@@ -207,8 +215,9 @@ class TestRateLimitConfig:
 
     def test_rate_limit_config_validation(self):
         """Test rate limit configuration validation"""
-        from application.config.environment import RateLimitConfig
         from pydantic import ValidationError
+
+        from application.config.environment import RateLimitConfig
 
         # Test minimum values
         with pytest.raises(ValidationError):

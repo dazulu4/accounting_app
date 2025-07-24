@@ -342,17 +342,22 @@ def _check_database_health() -> Dict[str, Any]:
     """Check database health with detailed metrics"""
     try:
         start_time = time.time()
-        with database_connection() as connection:
-            connection.execute("SELECT 1")
+        # Usar el método health_check de la instancia
+        is_healthy = database_connection.health_check()
         response_time = time.time() - start_time
 
-        return {
-            "status": "healthy",
-            "response_time_ms": round(response_time * 1000, 2),
-            "connection_pool_size": getattr(
-                database_connection, "pool_size", "unknown"
-            ),
-        }
+        if is_healthy:
+            return {
+                "status": "healthy",
+                "response_time_ms": round(response_time * 1000, 2),
+                "connection_pool_size": database_connection._config.pool_size,
+            }
+        else:
+            return {
+                "status": "unhealthy",
+                "error": "Database health check failed",
+                "response_time_ms": round(response_time * 1000, 2),
+            }
     except Exception as e:
         logger.error("database_health_check_failed", error=str(e))
         return {"status": "unhealthy", "error": str(e)}
@@ -371,6 +376,13 @@ def _check_memory_health() -> Dict[str, Any]:
             "available_mb": memory.available // 1024 // 1024,
             "total_mb": memory.total // 1024 // 1024,
         }
+    except ImportError:
+        logger.warning("psutil not available, skipping memory health check")
+        return {
+            "status": "unknown",
+            "error": "psutil module not available",
+            "message": "Install psutil for memory monitoring"
+        }
     except Exception as e:
         logger.error("memory_health_check_failed", error=str(e))
         return {"status": "unknown", "error": str(e)}
@@ -388,6 +400,13 @@ def _check_disk_health() -> Dict[str, Any]:
             "used_percent": disk.percent,
             "free_gb": disk.free // 1024 // 1024 // 1024,
             "total_gb": disk.total // 1024 // 1024 // 1024,
+        }
+    except ImportError:
+        logger.warning("psutil not available, skipping disk health check")
+        return {
+            "status": "unknown",
+            "error": "psutil module not available",
+            "message": "Install psutil for disk monitoring"
         }
     except Exception as e:
         logger.error("disk_health_check_failed", error=str(e))

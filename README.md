@@ -1,256 +1,91 @@
-# Accounting App Backend
+# 🪙 Accounting App Backend
 
-Backend Python basado en Clean Architecture usando Flask.
+Backend para una aplicación de contabilidad, desarrollado en Python con Flask y siguiendo los principios de **Clean Architecture**.
 
-## 🚀 Requisitos
+Este proyecto está diseñado para ser escalable, mantenible y fácil de probar, separando las responsabilidades en capas claras: Dominio, Aplicación e Infraestructura.
 
-- Python 3.11 o superior (funciona con 3.13.x)
-- [Poetry](https://python-poetry.org/docs/#installation)
-- Git
+---
 
-## ⚙️ Instalación local
+## 🚀 Guía de Inicio Rápido
+
+Sigue estos pasos para tener el entorno de desarrollo funcionando en tu máquina local.
+
+### 1. Requisitos Previos
+
+- **Python**: `3.11` o superior.
+- **Poetry**: Gestor de dependencias. [Instrucciones de instalación](https://python-poetry.org/docs/#installation).
+- **Git**: Sistema de control de versiones.
+- **Docker**: Para levantar la base de datos MySQL.
+
+### 2. Configuración del Entorno
 
 ```bash
-# Clonar el repositorio
-git clone https://github.com/tuusuario/accounting_app.git
+# 1. Clona el repositorio
+git clone <URL_DEL_REPOSITORIO>
 cd accounting_app
 
-# Instalar dependencias
+# 2. Instala las dependencias del proyecto
 poetry install
-```
 
-## ⚙️ Configuración
+# 3. Levanta la base de datos con Docker
+docker-compose -f local/docker/docker-compose.yml up -d
 
-La aplicación se configura a través de variables de entorno, siguiendo los principios de 12-Factor App. Para el desarrollo local, puedes crear un archivo `.env` en la raíz del proyecto.
-
-### Archivo `env.example`
-
-Hay un archivo llamado `env.example` en la raíz del proyecto. Cópialo a un nuevo archivo llamado `.env` y ajústalo a tu configuración local.
-
-```bash
-# Ejemplo de cómo copiar el archivo:
+# 4. Copia el archivo de ejemplo para las variables de entorno
 cp env.example .env
 ```
 
-### Variables de Entorno para Producción
+> ⚠️ **Nota**: El archivo `.env` ya viene pre-configurado para conectarse a la base de datos Docker. No necesitas hacer cambios adicionales para el entorno local.
 
-En producción (AWS Lambda), estas variables deben ser configuradas de forma segura:
+### 3. Aplicar Migraciones de la Base de Datos
 
--   `APP_ENVIRONMENT`: Se establece en `"production"`.
--   `APP_DEBUG`: Se establece en `false`.
--   `LOG_LEVEL`: Se recomienda `"INFO"`.
--   `DATABASE_*`: Estas variables se inyectan de forma segura a través de **AWS Secrets Manager** y **SSM Parameter Store**. Consulta la guía en `docs/aws/01-parameter-setup.md` para más detalles.
+Una vez que la base de datos esté corriendo, necesitas aplicar las migraciones para crear las tablas necesarias.
 
-## 🚀 Ejecutar el servidor
+```bash
+poetry run alembic upgrade head
+```
 
-**Opción recomendada (más confiable):**
+### 4. Ejecutar la Aplicación
+
+Con el entorno configurado y la base de datos lista, puedes iniciar el servidor:
+
 ```bash
 poetry run python application/main.py
 ```
 
-**Opción alternativa (puede tener problemas con rutas largas):**
-```bash
-# Activar entorno virtual
-poetry env activate
+El servidor estará disponible en `http://127.0.0.1:8000`.
 
-# Ejecutar servidor
-python application/main.py
-```
+### 5. Ejecutar Validaciones de Calidad
 
-> **Nota**: Se recomienda usar `poetry run` ya que evita problemas con rutas largas de Windows y es más confiable en diferentes entornos.
-
-## 🧰 Configuración de Base de Datos (MySQL + SQLAlchemy)
-Esta aplicación utiliza SQLAlchemy 2.x en modo async con MySQL 8 como motor de base de datos.
-
-### 📦 Requisitos
-```
-poetry add sqlalchemy --extras asyncio
-poetry add aiomysql pymysql
-```
-
-### 🛠 Inicializar la base de datos
-```
-poetry run python infrastructure/helpers/database/init_db.py
-```
-Se creará el archivo accounting.db con la tabla tasks.
-> En producción puede sustituirse fácilmente por MySQL o PostgreSQL ajustando DATABASE_URL en `base.py`.
-
-## 📡 Ejemplos de Endpoints
-
-### Crear una nueva tarea
-**Endpoint:** `POST http://127.0.0.1:8000/api/tasks`
-
-**Descripción:** Crea una nueva tarea contable con título, descripción y usuario asignado.
-
-**Body JSON:**
-```json
-{
-  "title": "Revisión contable mensual",
-  "description": "Auditoría y conciliación de cuentas",
-  "user_id": 1
-}
-```
-
-**Respuesta esperada:**
-```json
-{
-  "task_id": "GENERATED_UUID",
-  "title": "Revisión contable mensual",
-  "description": "Auditoría y conciliación de cuentas",
-  "status": "NEW",
-  "created_at": "2025-06-23T01:23:45.000Z"
-}
-```
-
-> **Nota:** Si usas un `user_id` que no existe, recibirás un error 400 con el mensaje: "Usuario no existe o está inactivo"
-
-### Listar tareas de un usuario
-**Endpoint:** `GET http://127.0.0.1:8000/api/tasks/{user_id}`
-
-**Descripción:** Obtiene todas las tareas asociadas a un usuario específico.
-
-**Ejemplo:**
-```bash
-GET http://127.0.0.1:8000/api/tasks/1
-```
-
-### Listar todos los usuarios activos
-**Endpoint:** `GET http://127.0.0.1:8000/api/users`
-
-**Descripción:** Obtiene la lista de todos los usuarios activos en el sistema.
-
-### Completar una tarea
-**Endpoint:** `PUT http://127.0.0.1:8000/api/tasks/{task_id}/complete`
-
-**Descripción:** Marca una tarea como completada y actualiza su timestamp de finalización.
-
-**Ejemplo:**
-```bash
-PUT http://127.0.0.1:8000/api/tasks/<TASK_ID>/complete
-```
-
-> **Nota:** Este endpoint emite un evento informando que la tarea fue completada. La salida en consola será algo como: `[EVENT] TaskCompleted: task_id=..., user_id=...`
-
-### Simular evento externo (inactivar usuario)
-**Endpoint:** `POST http://127.0.0.1:8000/api/users/{user_id}/deactivate`
-
-**Descripción:** Simula la inactivación de un usuario mediante un evento externo.
-
-**Ejemplo:**
-```bash
-POST http://127.0.0.1:8000/api/users/1/deactivate
-```
-
-> **Nota:** La salida en consola será: `[EVENT RECEIVED] Usuario 1 inactivado`
-
-## 📋 Resumen de Endpoints
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/api/users` | Lista todos los usuarios activos |
-| GET | `/api/tasks/{user_id}` | Lista las tareas de un usuario |
-| POST | `/api/tasks` | Crea una nueva tarea |
-| PUT | `/api/tasks/{task_id}/complete` | Completa una tarea existente |
-| POST | `/api/users/{user_id}/deactivate` | Simula inactivación de usuario (evento externo) |
-
-## 🧱 Estructura del Proyecto (Clean Architecture)
-
-```
-accounting_app/
-├── application/                # Capa de orquestación e inicio
-│   ├── main.py                 # Flask app principal
-│   └── di_container.py         # Inyección de dependencias
-├── domain/                     # Capa de dominio puro (negocio)
-│   ├── models/                 # Entidades de dominio (User, Task)
-│   ├── gateways/               # Interfaces (UserGateway, TaskGateway)
-│   └── usecases/               # Casos de uso (Create, Complete, etc.)
-├── infrastructure/             # Adaptadores externos y persistencia
-│   ├── driven_adapters/
-│   │   ├── repositories/       # Repositorios SQLAlchemy async
-│   │   ├── event_sender/       # Emisión de eventos (simulado)
-│   │   └── event_receiver/     # Recepción de eventos (simulado)
-│   ├── entrypoints/
-│   │   └── http/               # Rutas Flask (tasks, users)
-│   └── helpers/                # Init DB, logging, utilidades
-├── tests/                      # Pruebas unitarias
-├── pyproject.toml              # Configuración de dependencias con Poetry
-└── README.md                   # Documentación principal
-```
-
-## 🚀 Comandos Rápidos para Desarrollo
-
-Usa `make` en Linux/macOS:
+Para asegurar la calidad del código, puedes ejecutar las siguientes herramientas:
 
 ```bash
-make run        # Inicia el servidor Flask en modo desarrollo
-make db-init    # Inicializa la base de datos MySQL
-make test       # Ejecuta pruebas unitarias
+# Ejecutar pruebas unitarias y de integración
+poetry run pytest
+
+# Analizar cobertura de las pruebas
+poetry run pytest --cov
+
+# Revisar formateo, linting y tipos estáticos
+poetry run black . --check
+poetry run isort . --check-only
+poetry run flake8
+poetry run mypy .
 ```
-
-O si usas Windows (sin make), ejecuta:
-
-```cmd
-make.bat run
-make.bat db-init
-make.bat test
-```
-
-## ✅ Ejecutar Pruebas
-
-Para correr los tests unitarios:
-
-```bash
-make test
-```
-
-Esto ejecuta las pruebas ubicadas en la carpeta `tests/`.
-
-Por ejemplo:
-
-- `test_task_creation_defaults`: valida que una tarea nueva tenga estado `NEW`
-- `test_task_completion_sets_status`: verifica que al completar una tarea cambie a `COMPLETED` y registre `completed_at`
-
-## 🎁 Resultado Final
-
-Con esta base, el backend está listo para desarrollo colaborativo, integración con frontend Angular, y despliegue en ambiente de pruebas.
-
-### ✅ Características actuales
-
-- 🧱 Arquitectura Clean Architecture desacoplada y mantenible
-- ⚡️ Backend en Flask + SQLAlchemy async + MySQL 8
-- 📁 Separación clara en módulos: application, domain, infrastructure
-- 🧪 Tests básicos incluidos
-- 🚀 Sistema de comandos rápidos (`make` o `make.bat`)
-- 📡 Simulación de eventos de entrada/salida
-- 🤝 Preparado para consumir REST externos (como sistema de usuarios)
 
 ---
 
-## 🧭 ¿Qué sigue?
+## 📚 Documentación Completa
 
-### Opción A – Extender Backend (Etapas siguientes)
+Para una comprensión más profunda del proyecto, consulta la documentación detallada en los siguientes enlaces:
 
-- 🔐 **Autenticación JWT** y control de acceso
-- 📄 **Auditoría** de acciones y eventos
-- 💼 Módulo contable real: transacciones, cuentas, balances
-- 📤 Notificaciones, envío de correos, logs distribuidos
-- 🧩 Comunicación entre microservicios (RabbitMQ, Kafka, etc.)
+-   **[Arquitectura del Sistema](./docs/architecture/overview.md)**: Detalles sobre Clean Architecture y las capas del sistema.
+-   **[Stack Tecnológico](./docs/tech-stack/components.md)**: Herramientas y versiones utilizadas.
+-   **[Configuración del Entorno](./docs/setup/environment.md)**: Guías para configurar el proyecto.
+-   **[Calidad del Código](./docs/quality/linting.md)**: Políticas de calidad y cómo ejecutar pruebas.
+-   **[Base de Datos](./docs/database/migrations.md)**: Información sobre la estructura y migraciones.
+-   **[Despliegue](./docs/deployment/process.md)**: Proceso de despliegue e infraestructura.
+-   **[Flujo de Git](./docs/git/workflow.md)**: Describe el modelo de ramificación utilizado.
 
-### Opción B – Iniciar Frontend Angular 19/20
-
-- Conexión a endpoints existentes:
-  - `POST /api/tasks`
-  - `GET /api/tasks/{user_id}`
-  - `PUT /api/tasks/{task_id}/complete`
-- Creación de componentes para usuarios, tareas y eventos
-- Desarrollo de tablero contable (futuro módulo funcional)
-
----
-
-## 💡 Recomendaciones
-
-- Usa entornos virtuales aislados con `Poetry`
-- Para desarrollo colaborativo: configura `pre-commit` y `black`
-- Para entornos reales: añade migraciones (Alembic), logging estructurado y dockerización
+Para obtener pautas detalladas sobre cómo contribuir, consulta el archivo [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---

@@ -80,7 +80,7 @@ def get_database_url() -> str:
 
         # Construir la URL de conexión
         database_url = (
-            f"mysql+pymysql://{db_config.username}:{db_config.password}"
+            f"mysql+pymysql://{db_config.username}:{db_config.password.get_secret_value()}"
             f"@{db_config.host}:{db_config.port}/{db_config.name}"
         )
 

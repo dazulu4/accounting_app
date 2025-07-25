@@ -15,7 +15,7 @@ Sigue estos pasos para tener el entorno de desarrollo funcionando en tu máquina
 - **Python**: `3.11` o superior.
 - **Poetry**: Gestor de dependencias. [Instrucciones de instalación](https://python-poetry.org/docs/#installation).
 - **Git**: Sistema de control de versiones.
-- **Docker**: Para levantar la base de datos MySQL.
+- **MySQL**: Una instancia de base de datos MySQL accesible. Se proporciona una configuración con Docker para un inicio rápido (opcional).
 
 ### 2. Configuración del Entorno
 
@@ -27,23 +27,22 @@ cd accounting_app
 # 2. Instala las dependencias del proyecto
 poetry install
 
-# 3. Levanta la base de datos con Docker
+# 3. (Opcional) Levanta la base de datos con Docker
 docker-compose -f local/docker/docker-compose.yml up -d
 
 # 4. Copia el archivo de ejemplo para las variables de entorno
 cp env.example .env
 ```
 
-> ⚠️ **Nota**: El archivo `.env` ya viene pre-configurado para conectarse a la base de datos Docker. No necesitas hacer cambios adicionales para el entorno local.
+> ⚠️ **Nota**: El archivo `.env` ya viene pre-configurado para conectarse a una base de datos local estándar (incluida la de Docker). Si tu configuración de MySQL es diferente, ajusta las variables en este archivo.
 
 ### 3. Aplicar Migraciones de la Base de Datos
 
-Una vez que la base de datos esté corriendo, necesitas aplicar las migraciones para crear las tablas necesarias.
+Una vez que la base de datos esté corriendo y configurada en tu archivo `.env`, necesitas aplicar las migraciones para crear las tablas necesarias.
 
 ```bash
 poetry run alembic upgrade head
 ```
-
 ### 4. Ejecutar la Aplicación
 
 Con el entorno configurado y la base de datos lista, puedes iniciar el servidor:
@@ -89,3 +88,4 @@ Para una comprensión más profunda del proyecto, consulta la documentación det
 Para obtener pautas detalladas sobre cómo contribuir, consulta el archivo [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
+

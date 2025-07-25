@@ -1,146 +1,127 @@
-# Database Migrations - Enterprise Edition
+# Migraciones de Base de Datos - Edición Empresarial
 
-Professional database migration management using Alembic with enterprise features and multi-environment support.
+Gestión profesional de migraciones de bases de datos con Alembic, con características empresariales y soporte para múltiples entornos.
 
-## Features
+## Características Principales
 
-- **Environment-aware configuration** with automatic database URL detection
-- **Professional migration naming** with timestamps and descriptive messages
-- **Multi-environment support** for development, staging, and production
-- **Automatic backup creation** before migrations in non-development environments
-- **Comprehensive logging** with structured output
-- **Migration validation** and verification tools
-- **MySQL optimization** with proper indexes and constraints
+-   **Configuración sensible al entorno** con detección automática de la URL de la base de datos.
+-   **Nomenclatura profesional para migraciones** con marcas de tiempo y mensajes descriptivos.
+-   **Soporte para múltiples entornos** (desarrollo, producción).
+-   **Creación automática de backups** antes de las migraciones en entornos no productivos.
+-   **Logging completo** con salida estructurada.
+-   **Herramientas de validación** y verificación de migraciones.
+-   **Optimización para MySQL** con índices y restricciones adecuadas.
 
-## Quick Start
+## Guía de Inicio Rápido
 
-### 1. Environment Setup
+### 1. Configuración del Entorno
 
-Ensure your environment variables are configured:
+Asegúrate de que tus variables de entorno estén configuradas en el archivo `.env`. Puedes copiar `env.example` como punto de partida.
 
-```bash
-# Development (default values)
-export APP_ENVIRONMENT=development
-export DATABASE_HOST=127.0.0.1
-export DATABASE_PORT=3306
-export DATABASE_NAME=accounting_dev
-export DATABASE_USERNAME=admin
-export DATABASE_PASSWORD=admin123
-
-# For staging/production, use appropriate values
-```
-
-### 2. Basic Migration Commands
+### 2. Comandos Básicos de Migración
 
 ```bash
-# Apply all pending migrations
-./scripts/migrate.sh upgrade development
+# Aplicar todas las migraciones pendientes
+./scripts/migrate.sh upgrade
 
-# Check current migration status
-./scripts/migrate.sh current development
+# Revisar el estado actual de la migración
+./scripts/migrate.sh current
 
-# View migration history
-./scripts/migrate.sh history development
-
-# Create database backup
-./scripts/migrate.sh backup production
+# Ver el historial de migraciones
+./scripts/migrate.sh history
 ```
 
-### 3. Creating New Migrations
+### 3. Creación de Nuevas Migraciones
 
 ```bash
-# Generate migration with autogenerate (recommended)
-./scripts/generate-migration.sh "add_user_preferences_table" --auto
+# Generar una migración con "autogenerate" (recomendado)
+poetry run alembic revision --autogenerate -m "describir_el_cambio"
 
-# Create empty migration template
-./scripts/generate-migration.sh "custom_data_migration"
+# Crear una plantilla de migración vacía
+poetry run alembic revision -m "describir_migracion_de_datos"
 ```
 
-## Migration Scripts
+## Scripts de Migración
 
 ### `scripts/migrate.sh`
 
-Professional migration execution script with the following commands:
+Script profesional para la ejecución de migraciones. Es la forma recomendada de ejecutar las migraciones, ya que asegura que se cargue el entorno correcto.
 
-- **`upgrade`** - Apply pending migrations
-- **`downgrade`** - Rollback last migration
-- **`current`** - Show current migration version
-- **`history`** - Show migration history
-- **`backup`** - Create database backup
-- **`validate`** - Validate migration environment
+---
 
-**Usage:**
+-   **`new`** - Crea un nuevo archivo de migración con autogenerate.
+    -   **Script:** `./scripts/migrate.sh new "mi_mensaje_de_migracion"`
+    -   **Comando base:** `poetry run alembic revision --autogenerate -m "mi_mensaje_de_migracion"`
+
+-   **`upgrade`** - Aplica las migraciones pendientes.
+    -   **Script:** `./scripts/migrate.sh upgrade`
+    -   **Comando base:** `poetry run alembic upgrade head`
+
+-   **`downgrade`** - Revierte la última migración.
+    -   **Script:** `./scripts/migrate.sh downgrade`
+    -   **Comando base:** `poetry run alembic downgrade -1`
+
+-   **`current`** - Muestra la versión actual de la migración.
+    -   **Script:** `./scripts/migrate.sh current`
+    -   **Comando base:** `poetry run alembic current`
+
+-   **`history`** - Muestra el historial de migraciones.
+    -   **Script:** `./scripts/migrate.sh history`
+    -   **Comando base:** `poetry run alembic history`
+
+**Uso:**
 ```bash
-./scripts/migrate.sh [command] [environment]
+# Ejemplo: Crear una nueva migración
+./scripts/migrate.sh new "añadir_columna_email_a_usuarios"
+
+# Ejemplo: Aplicar migraciones
+./scripts/migrate.sh upgrade
 ```
 
-**Examples:**
-```bash
-./scripts/migrate.sh upgrade production
-./scripts/migrate.sh current staging
-./scripts/migrate.sh backup production
-```
-
-### `scripts/generate-migration.sh`
-
-Migration generation script with validation and templates:
-
-**Usage:**
-```bash
-./scripts/generate-migration.sh [message] [--auto]
-```
-
-**Examples:**
-```bash
-./scripts/generate-migration.sh "create_audit_log_table" --auto
-./scripts/generate-migration.sh "add_user_email_index"
-```
-
-## Configuration Files
+## Archivos de Configuración
 
 ### `alembic.ini`
 
-Enterprise-grade Alembic configuration with:
-- Professional migration file naming with timestamps
-- MySQL-specific engine configuration
-- Environment-specific settings
-- Comprehensive logging configuration
+Configuración de Alembic de nivel empresarial con:
+-   Nomenclatura profesional para archivos de migración con timestamps.
+-   Configuración del motor específica para MySQL.
+-   Ajustes específicos por entorno.
+-   Configuración de logging completa.
 
 ### `migration/env.py`
 
-Environment-aware migration configuration with:
-- Automatic database URL detection from environment variables
-- Enterprise database connection with pooling
-- Structured logging integration
-- Multi-environment support
-- Proper error handling
+Configuración de migración sensible al entorno con:
+-   Detección automática de la URL de la base de datos desde variables de entorno.
+-   Conexión a la base de datos de nivel empresarial con pooling.
+-   Integración de logging estructurado.
+-   Soporte para múltiples entornos.
+-   Manejo adecuado de errores.
 
-## Migration File Structure
+## Estructura de Archivos de Migración
 
-Migrations follow enterprise naming conventions:
+Las migraciones siguen convenciones de nomenclatura empresariales:
 ```
 YYYYMMDD_HHMM_revision_message.py
 ```
+Ejemplo: `20250119_1430_ba4800daf143_create_tasks_table.py`
 
-Example: `20250119_1430_ba4800daf143_create_tasks_table_enterprise.py`
+## Esquema de la Base de Datos
 
-## Database Schema
+### Tabla `tasks`
 
-### Tasks Table
-
-The main tasks table with enterprise-grade schema design:
+La tabla principal `tasks` con un diseño de esquema de nivel empresarial:
 
 ```sql
 CREATE TABLE tasks (
-    task_id CHAR(36) NOT NULL COMMENT 'Unique task identifier (UUID)',
-    title VARCHAR(200) NOT NULL COMMENT 'Task title or summary',
-    description TEXT NOT NULL COMMENT 'Detailed task description',
-    user_id INTEGER NOT NULL COMMENT 'ID of the user who owns this task',
-    status VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT 'Task status',
-    priority VARCHAR(10) NOT NULL DEFAULT 'medium' COMMENT 'Task priority',
+    task_id CHAR(36) NOT NULL COMMENT 'Identificador único de la tarea (UUID)',
+    title VARCHAR(200) NOT NULL COMMENT 'Título o resumen de la tarea',
+    description TEXT NOT NULL COMMENT 'Descripción detallada de la tarea',
+    user_id INTEGER NOT NULL COMMENT 'ID del usuario propietario de la tarea',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT 'Estado de la tarea',
+    priority VARCHAR(10) NOT NULL DEFAULT 'medium' COMMENT 'Prioridad de la tarea',
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-    completed_at DATETIME(6) NULL COMMENT 'Task completion timestamp',
+    completed_at DATETIME(6) NULL COMMENT 'Timestamp de finalización de la tarea',
     
     PRIMARY KEY (task_id),
     INDEX idx_tasks_user_id (user_id),
@@ -152,104 +133,96 @@ CREATE TABLE tasks (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
-## Environment-Specific Configuration
+## Configuración Específica por Entorno
 
-### Development
-- Local MySQL database
-- Migration logging enabled
-- No automatic backups
-- Relaxed validation
+### Desarrollo (Development)
+-   Base de datos MySQL local.
+-   Logging de migraciones habilitado.
+-   Sin backups automáticos.
+-   Validación relajada.
 
-### Staging
-- Staging database with SSL
-- Automatic backups before migrations
-- Migration validation required
-- Performance monitoring
+### Producción (Production)
+-   Base de datos de Producción con alta disponibilidad (High Availability).
+-   Backups obligatorios antes de cualquier migración.
+-   Confirmación extra para operaciones destructivas.
+-   Logging de auditoría completo.
+-   Procedimientos de rollback documentados.
 
-### Production
-- Production database with high availability
-- Mandatory backups before any migration
-- Extra confirmation for destructive operations
-- Comprehensive audit logging
-- Rollback procedures documented
+## Buenas Prácticas
 
-## Best Practices
+### Creación de Migraciones
+1.  **Usa nombres descriptivos** en formato `snake_case`.
+2.  **Prueba las migraciones** en desarrollo primero.
+3.  **Revisa las migraciones generadas** antes de aplicarlas.
+4.  **Incluye procedimientos de rollback** para migraciones complejas.
+5.  **Documenta las migraciones de datos** con comentarios.
 
-### Migration Creation
-1. **Use descriptive names** in snake_case format
-2. **Test migrations** in development first
-3. **Review generated migrations** before applying
-4. **Include rollback procedures** for complex migrations
-5. **Document data migrations** with comments
+### Ejecución de Migraciones
+1.  **Siempre haz un backup** antes de las migraciones a producción.
+2.  **Monitorea el rendimiento** durante migraciones grandes.
+3.  **Ten un plan de rollback** listo.
+4.  **Coordina con el equipo** para los despliegues a producción.
 
-### Migration Execution
-1. **Always backup** before production migrations
-2. **Test in staging** environment first
-3. **Monitor performance** during large migrations
-4. **Have rollback plan** ready
-5. **Coordinate with team** for production deployments
+### Convenciones de Nomenclatura
+-   **Crear tablas**: `create_[table_name]_table`
+-   **Añadir columnas**: `add_[column_name]_to_[table_name]`
+-   **Eliminar columnas**: `remove_[column_name]_from_[table_name]`
+-   **Añadir índices**: `add_index_[table_name]_[column_name]`
+-   **Migraciones de datos**: `migrate_[description]_data`
 
-### Naming Conventions
-- **Creating tables**: `create_[table_name]_table`
-- **Adding columns**: `add_[column_name]_to_[table_name]`
-- **Removing columns**: `remove_[column_name]_from_[table_name]`
-- **Adding indexes**: `add_index_[table_name]_[column_name]`
-- **Data migrations**: `migrate_[description]_data`
+## Solución de Problemas (Troubleshooting)
 
-## Troubleshooting
+### Problemas Comunes
 
-### Common Issues
-
-**Migration fails with connection error:**
+**La migración falla con un error de conexión:**
 ```bash
-# Verify environment variables
-./scripts/migrate.sh validate development
-
-# Check database connectivity
-mysql -h $DATABASE_HOST -u $DATABASE_USERNAME -p$DATABASE_PASSWORD $DATABASE_NAME
+# 1. Asegúrate de que tu archivo .env tiene las credenciales correctas.
+# 2. Revisa la conectividad de la base de datos:
+mysql -h $DB_HOST -u $DB_USERNAME -p$DB_PASSWORD $DB_NAME
 ```
 
-**Autogenerate not detecting changes:**
+**`autogenerate` no detecta los cambios:**
 ```bash
-# Verify models are properly imported
+# Verificar que los modelos se importen correctamente en la capa de infraestructura
 python -c "from infrastructure.driven_adapters.repositories.base import Base; print(Base.metadata.tables.keys())"
 ```
 
-**Migration conflicts:**
+**Conflictos de migración:**
 ```bash
-# Check current state
-./scripts/migrate.sh current development
+# Revisar el estado actual
+./scripts/migrate.sh current
 
-# View migration history
-./scripts/migrate.sh history development
+# Ver el historial de migraciones
+./scripts/migrate.sh history
 ```
 
-### Recovery Procedures
+### Procedimientos de Recuperación
 
-**Rollback last migration:**
+**Revertir la última migración:**
 ```bash
-./scripts/migrate.sh downgrade [environment]
+./scripts/migrate.sh downgrade
 ```
 
-**Restore from backup:**
+**Restaurar desde un backup:**
 ```bash
-# For production (requires DBA assistance)
-mysql -h $DATABASE_HOST -u $DATABASE_USERNAME -p$DATABASE_PASSWORD $DATABASE_NAME < backup_file.sql
+# Esta operación es manual y depende de tu estrategia de backups.
+# Ejemplo para producción (requiere asistencia de un DBA):
+mysql -h $DB_HOST -u $DB_USERNAME -p$DB_PASSWORD $DB_NAME < backup_file.sql
 ```
 
-## Monitoring and Maintenance
+## Monitoreo y Mantenimiento
 
-- **Regular backup verification** for production environments
-- **Migration performance monitoring** for large tables
-- **Index usage analysis** after schema changes
-- **Database size monitoring** after migrations
-- **Regular cleanup** of old backup files
+-   **Verificación regular de backups** para entornos de producción.
+-   **Monitoreo del rendimiento de migraciones** para tablas grandes.
+-   **Análisis del uso de índices** después de cambios en el esquema.
+-   **Monitoreo del tamaño de la base de datos** después de las migraciones.
+-   **Limpieza regular** de archivos de backup antiguos.
 
-## Support
+## Soporte
 
-For migration issues or questions:
-1. Check this documentation
-2. Review migration logs
-3. Validate environment configuration
-4. Test in development environment first
-5. Contact database team for production issues 
+Para problemas o preguntas sobre migraciones:
+1.  Revisa esta documentación.
+2.  Revisa los logs de migración.
+3.  Valida la configuración del entorno.
+4.  Prueba primero en el entorno de desarrollo.
+5.  Contacta al equipo de base de datos para problemas en producción.

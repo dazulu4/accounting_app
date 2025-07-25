@@ -117,48 +117,42 @@ def upgrade() -> None:
     op.create_index(
         'idx_tasks_user_id', 
         'tasks', 
-        ['user_id'],
-        comment='Index for user-based task queries'
+        ['user_id']
     )
     
     # Index for status filtering
     op.create_index(
         'idx_tasks_status', 
         'tasks', 
-        ['status'],
-        comment='Index for status-based filtering'
+        ['status']
     )
     
     # Composite index for user + status queries
     op.create_index(
         'idx_tasks_user_status', 
         'tasks', 
-        ['user_id', 'status'],
-        comment='Composite index for user + status queries'
+        ['user_id', 'status']
     )
     
     # Index for priority-based sorting
     op.create_index(
         'idx_tasks_priority', 
         'tasks', 
-        ['priority'],
-        comment='Index for priority-based queries'
+        ['priority']
     )
     
     # Index for timestamp-based queries (recent tasks, etc.)
     op.create_index(
         'idx_tasks_created_at', 
         'tasks', 
-        ['created_at'],
-        comment='Index for timestamp-based queries'
+        ['created_at']
     )
     
     # Composite index for completed tasks
     op.create_index(
         'idx_tasks_completed', 
         'tasks', 
-        ['status', 'completed_at'],
-        comment='Index for completed task queries'
+        ['status', 'completed_at']
     )
 
 

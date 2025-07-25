@@ -1,50 +1,41 @@
-# Estructura General de la Base de Datos
+# Estructura de la Base de Datos
 
-Este documento ofrece una visión general de la estructura de la base de datos `accounting`, sin entrar en el detalle de cada columna. El objetivo es entender las entidades principales y cómo se relacionan entre sí.
+Este documento ofrece una visión general de la estructura de la base de datos `accounting`. El objetivo es entender la entidad principal y cómo se relaciona con datos externos.
 
-El esquema de la base de datos es gestionado a través de las migraciones de Alembic, y los modelos de SQLAlchemy son la fuente de verdad para la estructura de las tablas.
+El esquema de la base de datos es gestionado a través de las migraciones de Alembic, y los modelos de SQLAlchemy son la fuente de verdad para la estructura de la tabla.
 
 ---
 
-## Tablas Principales
+## Tabla Principal: `tasks`
 
-La base de datos se centra en dos entidades de negocio principales: **Usuarios** y **Tareas**.
-
-### 1. Tabla `users`
-
--   **Propósito**: Almacena la información de los usuarios del sistema.
--   **Campos Clave**:
-    -   `id`: Identificador único del usuario.
-    -   `name`: Nombre del usuario.
-    -   `email`: Correo electrónico (debe ser único).
-    -   `status`: Estado del usuario (e.g., `ACTIVE`, `INACTIVE`).
-
-### 2. Tabla `tasks`
+La base de datos se centra en una única entidad de negocio principal: las **Tareas** (`tasks`).
 
 -   **Propósito**: Almacena las tareas contables que deben realizarse.
 -   **Campos Clave**:
-    -   `id`: Identificador único de la tarea (UUID).
-    -   `title`: Título de la tarea.
-    -   `description`: Descripción detallada de la tarea.
-    -   `status`: Estado de la tarea (e.g., `NEW`, `COMPLETED`).
-    -   `created_at`: Fecha y hora de creación.
-    -   `completed_at`: Fecha y hora de finalización.
-    -   `user_id`: Clave foránea que referencia al usuario asignado.
+    -   `task_id`: Identificador único de la tarea (UUID en formato CHAR(36)).
+    -   `title`: Título de la tarea (VARCHAR(200)).
+    -   `description`: Descripción detallada de la tarea (TEXT).
+    -   `user_id`: ID del usuario propietario de la tarea (INTEGER). Este ID corresponde a un usuario definido fuera de la base de datos (en un archivo JSON).
+    -   `status`: Estado de la tarea (VARCHAR(20), e.g., `pending`, `in_progress`, `completed`).
+    -   `priority`: Prioridad de la tarea (VARCHAR(10), e.g., `low`, `medium`, `high`).
+    -   `created_at`: Fecha y hora de creación (DATETIME).
+    -   `updated_at`: Fecha y hora de la última actualización (DATETIME).
+    -   `completed_at`: Fecha y hora de finalización (DATETIME, puede ser nulo).
 
 ---
 
-## Relaciones entre Tablas
+## Relación con Datos Externos (Usuarios)
 
-La principal relación en la base de datos es entre `users` y `tasks`:
+Aunque la base de datos solo contiene la tabla `tasks`, existe una relación conceptual importante:
 
--   **Un Usuario puede tener muchas Tareas**:
-    -   La tabla `tasks` tiene una columna `user_id` que es una clave foránea (`FOREIGN KEY`) que apunta al `id` de la tabla `users`.
-    -   Esto establece una relación de **uno a muchos** (one-to-many): un usuario puede estar asociado a múltiples tareas, pero cada tarea pertenece a un único usuario.
+-   **Cada Tarea pertenece a un Usuario**:
+    -   La tabla `tasks` tiene una columna `user_id`. Este campo no es una clave foránea a otra tabla de la base de datos, sino un identificador que vincula la tarea con un usuario específico.
+    -   La información de los usuarios (a la que apunta `user_id`) se gestiona externamente, en un archivo `dummyusers.json`.
 
 ---
 
 ## Consideraciones Adicionales
 
--   **Claves Primarias**: Todas las tablas tienen una clave primaria (`PRIMARY KEY`) para identificar de forma única cada registro.
--   **Índices**: Se utilizan índices en las claves foráneas y en otras columnas que se usan frecuentemente en búsquedas para mejorar el rendimiento de las consultas.
+-   **Clave Primaria**: La tabla `tasks` tiene una clave primaria (`PRIMARY KEY`) para identificar de forma única cada registro.
+-   **Índices**: Se utilizan índices en columnas que se usan frecuentemente en búsquedas (como `user_id` y `status`) para mejorar el rendimiento de las consultas.
 -   **Evolución del Esquema**: Cualquier cambio en esta estructura debe realizarse a través de un nuevo script de migración de Alembic para asegurar la consistencia en todos los entornos. 

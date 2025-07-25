@@ -52,34 +52,40 @@ Para el desarrollo local, estas variables se gestionan a través de un archivo `
     -   `APP_ENVIRONMENT`: Define el entorno de la aplicación (e.g., `development`, `production`).
     -   `APP_DEBUG`: Poner en `true` para activar el modo de depuración de Flask.
     -   `LOG_LEVEL`: Nivel de los logs (e.g., `DEBUG`, `INFO`).
-    -   `DATABASE_HOST`: Host de la base de datos (apunta a `localhost` o `127.0.0.1` para Docker).
+    -   `DATABASE_HOST`: Host de la base de datos (apunta a `127.0.0.1` para Docker).
     -   `DATABASE_PORT`: Puerto de la base de datos.
-    -   `DATABASE_USER`: Usuario para la conexión.
+    -   `DATABASE_USERNAME`: Usuario para la conexión.
     -   `DATABASE_PASSWORD`: Contraseña para la conexión.
     -   `DATABASE_NAME`: Nombre de la base de datos.
+    -   `CORS_ORIGINS`: Orígenes permitidos para peticiones a la API.
 
 ---
 
-## 4. Base de Datos con Docker
+## 4. Base de Datos
 
-Para evitar instalar MySQL directamente en tu máquina, usamos Docker para levantar un contenedor con la base de datos.
+La aplicación requiere una base de datos MySQL para funcionar. Tienes dos opciones principales para configurar esto en tu entorno local.
 
-1.  **Navega al directorio de Docker**:
+### Opción 1: Usar Docker (Recomendado)
+
+Esta es la forma más rápida y sencilla de empezar, ya que no requiere instalar MySQL en tu máquina.
+
+1.  **Requisito**: Tener Docker y Docker Compose instalados.
+2.  **Levantar el servicio**:
     ```bash
-    cd local/docker
+    docker-compose -f local/docker/docker-compose.yml up -d
     ```
+    Este comando utiliza el archivo de configuración en `local/docker` para crear y ejecutar un contenedor con una base de datos MySQL lista para ser usada. El flag `-d` lo ejecuta en segundo plano.
 
-2.  **Levanta el servicio**:
-    ```bash
-    docker-compose up -d
+### Opción 2: Usar una Instalación Local de MySQL
+
+Si prefieres no usar Docker o ya tienes MySQL instalado en tu máquina, puedes usar esa instancia.
+
+1.  **Asegúrate de que MySQL esté corriendo**.
+2.  **Crea una base de datos** para la aplicación si aún no existe. Por defecto, la aplicación buscará una base de datos llamada `accounting`.
+    ```sql
+    CREATE DATABASE accounting;
     ```
-    El flag `-d` ejecuta el contenedor en segundo plano (detached mode).
-
-Para verificar que el contenedor está corriendo, puedes usar el comando:
-```bash
-docker ps
-```
-Deberías ver un contenedor llamado `accounting-mysql` en la lista.
+3.  **Configura tu archivo `.env`** con los datos de conexión correctos (host, puerto, usuario y contraseña) para que apunten a tu instancia local de MySQL.
 
 ---
 

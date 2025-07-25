@@ -43,19 +43,32 @@ Esto creará un nuevo archivo en `migration/versions/` con los cambios detectado
 
 ### Aplicar Migraciones (Upgrade)
 
-Para aplicar todas las migraciones pendientes y llevar la base de datos a la última versión, ejecuta:
+El comando base para aplicar todas las migraciones pendientes hasta la última versión es:
 
 ```bash
 poetry run alembic upgrade head
 ```
-`head` es una referencia a la última versión disponible.
+> `head` es una referencia a la última versión disponible.
+
+Como opción recomendada, puedes utilizar nuestro script auxiliar, que asegura la configuración correcta del entorno:
+
+```bash
+./scripts/migrate.sh upgrade
+```
 
 ### Revertir Migraciones (Downgrade)
 
-Para revertir la última migración aplicada, puedes ejecutar:
+Para revertir la última migración aplicada, el comando base es:
 
 ```bash
 poetry run alembic downgrade -1
+```
+> `-1` indica que se debe retroceder una sola revisión.
+
+La forma recomendada a través del script es:
+
+```bash
+./scripts/migrate.sh downgrade -1
 ```
 
 ---

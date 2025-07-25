@@ -8,16 +8,15 @@ Este documento detalla los pasos para ejecutar la aplicación en tu entorno de d
 
 Antes de iniciar la aplicación por primera vez, es crucial preparar la base de datos. Las migraciones se encargan de crear todas las tablas y relaciones necesarias.
 
-Con el contenedor de Docker de la base de datos ya corriendo, ejecuta el siguiente comando desde la raíz del proyecto:
+Con el contenedor de Docker de la base de datos ya corriendo, ejecuta el siguiente script desde la raíz del proyecto:
 
 ```bash
-poetry run alembic upgrade head
+./scripts/migrate.sh upgrade
 ```
 
--   `poetry run`: Ejecuta el comando dentro del entorno virtual del proyecto.
--   `alembic upgrade head`: Aplica todas las migraciones pendientes hasta la más reciente.
+Este script se encarga de ejecutar Alembic con la configuración correcta para aplicar todas las migraciones pendientes hasta la más reciente.
 
-Si todo va bien, verás logs de Alembic indicando que las migraciones se han ejecutado.
+Si todo va bien, verás logs indicando que las migraciones se han ejecutado correctamente.
 
 ---
 

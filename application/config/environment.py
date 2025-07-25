@@ -54,10 +54,10 @@ class DatabaseConfig(BaseSettings):
     port: int = Field(default=3306, ge=1, le=65535, description="Database port number")
     name: str = Field(default="accounting", min_length=1, description="Database name")
     username: str = Field(
-        default="admin", min_length=1, description="Database username"
+        default="root", min_length=1, description="Database username"
     )
     password: SecretStr = Field(
-        default="admin", min_length=1, description="Database password"
+        default="root", min_length=1, description="Database password"
     )
 
     # Connection pool configuration
@@ -78,7 +78,7 @@ class DatabaseConfig(BaseSettings):
             )
         host = v.strip()
         # Basic host validation (IP or hostname)
-        if not re.match(r"^[a-zA-Z0-9.-]+$", host) and host != "localhost":
+        if not (re.match(r"^[a-zA-Z0-9.-]+$", host) or host == "localhost"):
             raise ValueError(
                 f"Invalid database host format: {host}. Must be a valid "
                 "hostname or IP address."

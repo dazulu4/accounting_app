@@ -21,14 +21,14 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import models for autogenerate support
-from infrastructure.driven_adapters.repositories.base import Base
+from infrastructure.helpers.database.connection import Base
 
 # Set target metadata for autogenerate
 target_metadata = Base.metadata
 
 # Import all models to ensure they're registered
 try:
-    from infrastructure.driven_adapters.repositories.task_repository import TaskModel
+    pass
 except ImportError:
     pass  # Models may not be available during initial setup
 

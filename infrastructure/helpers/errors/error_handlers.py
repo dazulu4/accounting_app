@@ -74,11 +74,14 @@ class HTTPErrorHandler:
             "handling_exception",
             exception_type=type(exception).__name__,
             exception_class=exception.__class__.__name__,
-            module=getattr(exception, "__module__", "unknown")
+            module=getattr(exception, "__module__", "unknown"),
         )
 
         # Handle Pydantic validation errors specially (detailed field errors)
-        if isinstance(exception, ValidationError) or exception.__class__.__name__ == "ValidationError":
+        if (
+            isinstance(exception, ValidationError)
+            or exception.__class__.__name__ == "ValidationError"
+        ):
             return cls._handle_validation_error(exception)
 
         # Get mapping from centralized registry
@@ -86,20 +89,20 @@ class HTTPErrorHandler:
 
         # Get exception details for development environment
         details = cls._get_exception_details(exception)
-        
+
         # Use centralized error response creation
         response_data, status_code = create_error_response(
             error_type=error_type,
             error_code=error_type,
             message=cls._get_safe_error_message(exception, status_code),
             status_code=status_code,
-            details=details
+            details=details,
         )
-        
+
         # For backward compatibility with tests, add exception details directly to error
         if details and cls._should_include_details():
             response_data["error"].update(details)
-        
+
         return response_data, status_code
 
     @classmethod
@@ -114,7 +117,9 @@ class HTTPErrorHandler:
 
         # Extract field errors from Pydantic validation error
         field_errors = {}
-        if hasattr(exception, "errors") and callable(getattr(exception, "errors", None)):
+        if hasattr(exception, "errors") and callable(
+            getattr(exception, "errors", None)
+        ):
             try:
                 for error in exception.errors():
                     field_name = " -> ".join(str(loc) for loc in error["loc"])
@@ -127,7 +132,9 @@ class HTTPErrorHandler:
 
         # Create main error message
         if field_errors:
-            main_message = "Validation failed for the following fields: " + ", ".join(field_errors.keys())
+            main_message = "Validation failed for the following fields: " + ", ".join(
+                field_errors.keys()
+            )
         else:
             main_message = "The request data is invalid"
 
@@ -137,23 +144,23 @@ class HTTPErrorHandler:
             error_code="VALIDATION_ERROR",
             message=main_message,
             status_code=400,
-            details={"field_errors": field_errors}
+            details={"field_errors": field_errors},
         )
 
     @classmethod
     def _get_exception_details(cls, exception: Exception) -> Optional[Dict[str, Any]]:
         """
         Get exception details for development environment
-        
+
         Args:
             exception: Exception to get details for
-            
+
         Returns:
             Optional dict with exception details
         """
         if not cls._should_include_details():
             return None
-            
+
         details = {}
         if isinstance(exception, BusinessException):
             details = exception.details or {}
@@ -162,12 +169,10 @@ class HTTPErrorHandler:
         else:
             details = {
                 "exception_type": type(exception).__name__,
-                "exception_message": str(exception)
+                "exception_message": str(exception),
             }
-        
+
         return details if details else None
-
-
 
     @classmethod
     def _get_safe_error_message(cls, exception: Exception, status_code: int) -> str:
@@ -361,7 +366,7 @@ def create_error_response(
 ) -> Tuple[Dict[str, Any], int]:
     """
     Create a standardized error response with consistent JSON structure.
-    
+
     Args:
         error_type: Type of error (e.g., "VALIDATION_ERROR", "NOT_FOUND")
         error_code: Error code for client consumption
@@ -369,7 +374,7 @@ def create_error_response(
         status_code: HTTP status code
         details: Optional additional error details
         include_request_context: Whether to include request context (path, method, request_id)
-        
+
     Returns:
         Tuple of (response_dict, status_code)
     """
@@ -377,12 +382,12 @@ def create_error_response(
     request_id = None
     path = None
     method = None
-    
+
     if include_request_context and request:
         request_id = get_request_id()
         path = request.path
         method = request.method
-    
+
     # Build response structure
     response = {
         "error": {
@@ -392,23 +397,23 @@ def create_error_response(
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     }
-    
+
     # Add request context if available (always include, even if None for tests)
     response["error"]["request_id"] = request_id
     response["error"]["path"] = path
     response["error"]["method"] = method
-    
+
     # Add details if provided
     if details:
         response["error"]["details"] = details
-    
+
     return response, status_code
 
 
 def get_request_id() -> Optional[str]:
     """
     Get or generate request ID for tracking purposes.
-    
+
     Returns:
         Request ID string if available, None otherwise
     """

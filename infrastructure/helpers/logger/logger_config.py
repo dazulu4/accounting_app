@@ -11,7 +11,6 @@ Streamlined logging configuration that maintains essential features:
 import logging
 import uuid
 from contextlib import contextmanager
-from typing import Any, Dict
 
 import structlog
 

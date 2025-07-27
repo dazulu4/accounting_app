@@ -76,12 +76,20 @@ run_autoflake() {
     
     # Contar imports no utilizados antes
     before_count=$(poetry run flake8 . --count --select=F401 2>/dev/null | wc -l || echo "0")
+    # Asegurar que before_count sea un número
+    before_count=$(echo "$before_count" | tr -cd '0-9' || echo "0")
     
     # Ejecutar autoflake para eliminar imports no utilizados
     if poetry run autoflake --in-place --remove-all-unused-imports --recursive . --quiet; then
         # Contar imports no utilizados después
         after_count=$(poetry run flake8 . --count --select=F401 2>/dev/null | wc -l || echo "0")
-        reduction=$((before_count - after_count))
+        # Asegurar que after_count sea un número
+        after_count=$(echo "$after_count" | tr -cd '0-9' || echo "0")
+        
+        # Convertir a números para la operación aritmética
+        before_num=$((10#$before_count))
+        after_num=$((10#$after_count))
+        reduction=$((before_num - after_num))
         
         if [ "$reduction" -gt 0 ]; then
             log_success "autoflake: Eliminados $reduction imports no utilizados"

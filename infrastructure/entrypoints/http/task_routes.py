@@ -12,12 +12,8 @@ Key Features:
 - Strategic logging at endpoint level
 """
 
-from uuid import UUID
-
 from flask import Blueprint, current_app, jsonify, request
 from pydantic import ValidationError
-
-from infrastructure.helpers.utils.validation_utils import validate_uuid
 
 from application.schemas.task_schema import (
     CompleteTaskRequest,
@@ -34,6 +30,7 @@ from domain.exceptions.business_exceptions import (
 )
 from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler
 from infrastructure.helpers.logger.logger_config import get_logger
+from infrastructure.helpers.utils.validation_utils import validate_uuid
 
 # Crear un Blueprint para las rutas de tareas
 task_blueprint = Blueprint("tasks", __name__)
@@ -57,7 +54,7 @@ def create_task():
             title=data.title,
             description=data.description,
             user_id=data.user_id,
-            priority=data.priority
+            priority=data.priority,
         )
 
         logger.info(
@@ -65,7 +62,7 @@ def create_task():
             task_id=task_entity.task_id,
             user_id=data.user_id,
         )
-        
+
         # Convertir la entidad a DTO de respuesta
         response_dto = CreateTaskResponse.from_entity(task_entity)
 
@@ -96,7 +93,7 @@ def create_task():
 def complete_task(task_id: str):
     """Marca una tarea como completada."""
     logger.debug("complete_task_request_received", task_id=task_id)
-    
+
     # Validar y convertir task_id a UUID
     uuid_task_id, error_response = validate_uuid(task_id)
     if error_response:
@@ -112,7 +109,7 @@ def complete_task(task_id: str):
         task_entity = use_case.execute(uuid_task_id)
 
         logger.info("task_completed_successfully", task_id=task_id)
-        
+
         # Convertir la entidad a DTO de respuesta
         response_dto = CompleteTaskResponse.from_entity(task_entity)
 

@@ -8,17 +8,16 @@ and formats used throughout the application.
 from typing import Tuple, Union
 from uuid import UUID
 
-from flask import jsonify
 from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler
 
 
 def validate_uuid(uuid_str: str) -> Tuple[Union[UUID, None], Union[tuple, None]]:
     """
     Validate a string as a UUID and return the UUID object or an error response.
-    
+
     Args:
         uuid_str: The string to validate as a UUID
-        
+
     Returns:
         Tuple containing:
         - UUID object if valid, None if invalid
@@ -32,4 +31,4 @@ def validate_uuid(uuid_str: str) -> Tuple[Union[UUID, None], Union[tuple, None]]
         # Si falla la conversión, devolver error
         error = ValueError(f"Invalid UUID format: {uuid_str}")
         response_data, status_code = HTTPErrorHandler.handle_exception(error)
-        return None, (response_data, status_code) 
+        return None, (response_data, status_code)

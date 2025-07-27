@@ -27,7 +27,6 @@ from domain.entities.task_entity import TaskEntity
 from domain.enums.task_status_enum import TaskPriorityEnum, TaskStatusEnum
 from domain.exceptions.business_exceptions import (
     DatabaseException,
-    TaskNotFoundException,
     ValidationException,
 )
 from domain.gateways.task_gateway import TaskGateway

@@ -186,7 +186,7 @@ mysql -h $DB_HOST -u $DB_USERNAME -p$DB_PASSWORD $DB_NAME
 **`autogenerate` no detecta los cambios:**
 ```bash
 # Verificar que los modelos se importen correctamente en la capa de infraestructura
-python -c "from infrastructure.driven_adapters.repositories.base import Base; print(Base.metadata.tables.keys())"
+python -c "from infrastructure.helpers.database.connection import Base; print(Base.metadata.tables.keys())"
 ```
 
 **Conflictos de migración:**

@@ -1,27 +1,29 @@
 """
-Logger Helpers Package
+Logger Helpers Package - Task Manager Edition
 
-This package contains enterprise logging utilities with structured logging,
-context management, and environment-aware configuration.
+Simplified logging utilities with essential structured logging features:
+- Environment-aware configuration
+- Request context tracing
+- JSON/Console output based on environment
 
 Components:
-- logger_config.py: Structured logging configuration and utilities
+- logger_config.py: Simplified logging configuration
 """
 
 from .logger_config import (
     LoggerConfig,
-    LoggingContext,
-    configure_performance_logging,
+    generate_request_id,
     get_logger,
-    log_function_call,
+    get_request_logger,
+    get_security_logger,
     logging_context,
 )
 
 __all__ = [
     "LoggerConfig",
-    "LoggingContext",
+    "generate_request_id",
     "get_logger",
+    "get_request_logger",
+    "get_security_logger",
     "logging_context",
-    "configure_performance_logging",
-    "log_function_call",
 ]

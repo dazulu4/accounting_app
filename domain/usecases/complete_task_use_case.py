@@ -1,89 +1,92 @@
 """
 Complete Task Use Case - Domain Layer
 
-This use case handles task completion with enterprise validation,
-state transition management, and strategic logging.
+This use case handles task completion following Clean Architecture principles
+with simplified validation and consistent patterns.
 
 Key Features:
 - Task existence validation
-- State transition validation (only PENDING/IN_PROGRESS can be completed)
-- Strategic logging at critical points
-- Transactional management with UoW pattern
-- Enterprise exception handling
+- State transition validation using centralized exceptions
+- Simple logging
+- Clean Architecture compliance (no application/infrastructure imports)
 """
 
+# No imports from application/infrastructure layer - Clean Architecture compliance
 import logging
+from uuid import UUID
 
-from application.schemas.task_schema import (
-    CompleteTaskRequest,
-    CompleteTaskResponse,
-)
-from domain.entities.task_entity import (
+from domain.entities.task_entity import TaskEntity
+from domain.exceptions.business_exceptions import (
+    InvalidTaskTransitionException,
     TaskAlreadyCompletedException,
-    TaskStateTransitionException,
+    TaskNotFoundException,
 )
-from domain.exceptions.business_exceptions import TaskNotFoundException
 from domain.gateways.task_gateway import TaskGateway
-from infrastructure.helpers.database.unit_of_work import UnitOfWork
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 
 class CompleteTaskUseCase:
     """
     Use case for completing a task.
+
+    This use case handles task completion with proper validation
+    and state transition management.
     """
 
-    def __init__(self, task_gateway: TaskGateway, unit_of_work: UnitOfWork):
-        self.task_gateway = task_gateway
-        self.uow = unit_of_work
-        self._logger = logging.getLogger(self.__class__.__name__)
+    def __init__(self, task_gateway: TaskGateway):
+        """
+        Initialize the use case with required gateway.
 
-    def execute(self, command: CompleteTaskRequest) -> CompleteTaskResponse:
+        Args:
+            task_gateway: Gateway for task persistence operations
         """
-        Execute the use case.
+        self.task_gateway = task_gateway
+
+    def execute(self, task_id: UUID) -> TaskEntity:
         """
-        self._logger.info(
-            "Starting task completion use case",
-            extra={"task_id": str(command.task_id)},
-        )
+        Execute the task completion use case.
+
+        Args:
+            task_id: UUID of the task to complete
+
+        Returns:
+            TaskEntity: The completed task
+
+        Raises:
+            TaskNotFoundException: If the task doesn't exist
+            TaskAlreadyCompletedException: If task is already completed
+            InvalidTaskTransitionException: If task cannot be completed
+        """
+        logger.info(f"complete_task_use_case_started task_id={task_id}")
 
         try:
-            with self.uow:
-                task = self.task_gateway.find_task_by_id(command.task_id)
+            # Find task
+            task = self.task_gateway.find_task_by_id(task_id)
+            if not task:
+                raise TaskNotFoundException(task_id=task_id)
 
-                if not task:
-                    self._logger.warning(
-                        "Task not found",
-                        extra={"task_id": str(command.task_id)},
-                    )
-                    raise TaskNotFoundException(command.task_id)
+            # Complete task (this will handle state validation)
+            task.complete()
 
-                task.complete_task()
+            # Save task
+            self.task_gateway.save_task(task)
 
-                self.task_gateway.save_task(task)
-
-                self.uow.commit()
-
-                self._logger.info(
-                    "Task completed successfully",
-                    extra={"task_id": str(task.task_id)},
-                )
-
-                return CompleteTaskResponse.from_entity(task)
+            logger.info(f"complete_task_use_case_completed task_id={task_id}")
+            return task
 
         except (
             TaskNotFoundException,
             TaskAlreadyCompletedException,
-            TaskStateTransitionException,
+            InvalidTaskTransitionException,
         ) as e:
-            self._logger.error(
-                "Error completing task",
-                extra={"task_id": str(command.task_id), "error": str(e)},
+            logger.warning(
+                f"complete_task_use_case_failed task_id={task_id} error={str(e)}"
             )
             raise
-
         except Exception as e:
-            self._logger.critical(
-                "Unexpected error completing task",
-                extra={"task_id": str(command.task_id), "error": str(e)},
+            logger.error(
+                f"complete_task_use_case_unexpected_error task_id={task_id} error={str(e)}"
             )
-            raise Exception(f"An unexpected error occurred: {e}")
+            raise

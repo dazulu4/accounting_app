@@ -1,87 +1,82 @@
 """
 Task Entity - Domain Model
 
-This module contains the core Task entity following Domain-Driven Design
-principles with enterprise naming conventions, state transitions, and business
-rule validation.
+Simplified task entity using Pydantic for consistency with UserEntity
+and following Domain-Driven Design principles.
 
 Key Features:
-- English naming conventions throughout
+- Pydantic BaseModel for automatic validation and serialization
 - State transition validation using TaskStatusEnum
-- Business rule validation with custom exceptions
-- Immutable entity design where appropriate
-- Rich domain methods for business operations
+- Business rule validation with centralized exceptions
+- Consistent with UserEntity design
 """
 
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
-from domain.constants.task_constants import (
-    TaskConstants,
-    TaskValidationMessages,
-)
+from pydantic import BaseModel, Field, field_validator
+
+from domain.constants.task_constants import TaskConstants
 from domain.enums.task_status_enum import TaskPriorityEnum, TaskStatusEnum
+from domain.exceptions.business_exceptions import (
+    InvalidTaskTransitionException,
+    TaskAlreadyCancelledException,
+    TaskAlreadyCompletedException,
+)
 
 
-class TaskDomainException(Exception):
-    """Base exception for task domain errors"""
-
-
-class TaskValidationException(TaskDomainException):
-    """Raised when task validation fails"""
-
-
-class TaskStateTransitionException(TaskDomainException):
-    """Raised when invalid state transition is attempted"""
-
-
-class TaskAlreadyCompletedException(TaskDomainException):
-    """Raised when trying to modify a completed task"""
-
-
-class TaskBusinessRuleException(TaskDomainException):
-    """Raised when business rule validation fails"""
-
-
-@dataclass
-class TaskEntity:
+class TaskEntity(BaseModel):
     """
     Task entity representing a work item in the accounting system
 
     This entity encapsulates all business logic related to task management
     including state transitions, validation, and business rules.
-
-    Attributes:
-        task_id: Unique identifier for the task
-        title: Task title (1-200 characters)
-        description: Task description (1-1000 characters)
-        user_id: ID of the user assigned to this task
-        status: Current task status (from TaskStatusEnum)
-        priority: Task priority (from TaskPriorityEnum)
-        created_at: Timestamp when task was created
-        completed_at: Timestamp when task was completed (None if not completed)
-        updated_at: Timestamp when task was last updated
     """
 
-    task_id: UUID
-    title: str
-    description: str
-    user_id: int
-    status: TaskStatusEnum = field(default=TaskStatusEnum.PENDING)
-    priority: TaskPriorityEnum = field(default=TaskPriorityEnum.MEDIUM)
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    completed_at: Optional[datetime] = field(default=None)
-    updated_at: Optional[datetime] = field(default=None)
+    task_id: UUID = Field(
+        default_factory=uuid4, description="Unique identifier for the task"
+    )
+    title: str = Field(..., min_length=1, max_length=200, description="Task title")
+    description: str = Field(
+        ..., min_length=1, max_length=1000, description="Task description"
+    )
+    user_id: int = Field(..., gt=0, description="ID of the user assigned to this task")
+    status: TaskStatusEnum = Field(
+        default=TaskStatusEnum.PENDING, description="Current task status"
+    )
+    priority: TaskPriorityEnum = Field(
+        default=TaskPriorityEnum.MEDIUM, description="Task priority"
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Creation timestamp",
+    )
+    completed_at: Optional[datetime] = Field(
+        default=None, description="Completion timestamp"
+    )
+    updated_at: Optional[datetime] = Field(
+        default=None, description="Last update timestamp"
+    )
 
-    def __post_init__(self):
-        """Validate entity after initialization"""
-        self._validate_title()
-        self._validate_description()
-        self._validate_user_id()
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, v: str) -> str:
+        """Validate and clean task title"""
+        if not v.strip():
+            raise ValueError("Task title cannot be empty or whitespace")
+        return v.strip()
 
-        # Set initial updated_at if not provided
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, v: str) -> str:
+        """Validate and clean task description"""
+        if not v.strip():
+            raise ValueError("Task description cannot be empty or whitespace")
+        return v.strip()
+
+    def model_post_init(self, __context) -> None:
+        """Set initial updated_at if not provided"""
         if self.updated_at is None:
             self.updated_at = self.created_at
 
@@ -104,98 +99,54 @@ class TaskEntity:
 
         Returns:
             TaskEntity: New task instance
-
-        Raises:
-            TaskValidationException: If validation fails
         """
-        task_id = uuid4()
-
-        task = cls(
-            task_id=task_id,
+        return cls(
             title=title,
             description=description,
             user_id=user_id,
             priority=priority,
         )
 
-        return task
+    def complete(self) -> None:
+        """
+        Mark task as completed
 
-    def _validate_title(self) -> None:
-        """Validate task title"""
-        if not self.title or not self.title.strip():
-            raise TaskValidationException(TaskValidationMessages.TITLE_REQUIRED)
+        Raises:
+            TaskStateException: If task cannot be completed
+        """
+        if self.status.is_terminal():
+            raise TaskAlreadyCompletedException(
+                task_id=self.task_id, attempted_operation="complete"
+            )
 
-        if len(self.title.strip()) < TaskConstants.TITLE_MIN_LENGTH:
-            raise TaskValidationException(TaskValidationMessages.TITLE_TOO_SHORT)
-
-        if len(self.title) > TaskConstants.TITLE_MAX_LENGTH:
-            raise TaskValidationException(TaskValidationMessages.TITLE_TOO_LONG)
-
-    def _validate_description(self) -> None:
-        """Validate task description"""
-        if not self.description or not self.description.strip():
-            raise TaskValidationException(TaskValidationMessages.DESCRIPTION_REQUIRED)
-
-        if len(self.description.strip()) < TaskConstants.DESCRIPTION_MIN_LENGTH:
-            raise TaskValidationException(TaskValidationMessages.DESCRIPTION_TOO_SHORT)
-
-        if len(self.description) > TaskConstants.DESCRIPTION_MAX_LENGTH:
-            raise TaskValidationException(TaskValidationMessages.DESCRIPTION_TOO_LONG)
-
-    def _validate_user_id(self) -> None:
-        """Validate user ID"""
-        if not isinstance(self.user_id, int) or self.user_id <= 0:
-            raise TaskValidationException("User ID must be a positive integer")
-
-    def _update_timestamp(self) -> None:
-        """Update the updated_at timestamp"""
-        self.updated_at = datetime.now(timezone.utc)
+        self.status = TaskStatusEnum.COMPLETED
+        self.completed_at = datetime.now(timezone.utc)
+        self._update_timestamp()
 
     def start_task(self) -> None:
         """
         Start working on the task (transition to IN_PROGRESS)
 
         Raises:
-            TaskStateTransitionException: If transition is not allowed
             TaskAlreadyCompletedException: If task is already completed
-        """
-        if self.status.is_terminal():
-            raise TaskAlreadyCompletedException(
-                TaskValidationMessages.TASK_ALREADY_COMPLETED
-            )
-
-        if not TaskStatusEnum.can_transition_to(
-            self.status.value, TaskStatusEnum.IN_PROGRESS.value
-        ):
-            raise TaskStateTransitionException(
-                f"Cannot transition from {self.status} to {TaskStatusEnum.IN_PROGRESS}"
-            )
-
-        self.status = TaskStatusEnum.IN_PROGRESS
-        self._update_timestamp()
-
-    def complete_task(self) -> None:
-        """
-        Mark task as completed
-
-        Raises:
-            TaskStateTransitionException: If transition is not allowed
-            TaskAlreadyCompletedException: If task is already completed
+            InvalidTaskTransitionException: If transition is not allowed
         """
         if self.status == TaskStatusEnum.COMPLETED:
             raise TaskAlreadyCompletedException(
-                TaskValidationMessages.TASK_ALREADY_COMPLETED
+                task_id=self.task_id, attempted_operation="start"
+            )
+        elif self.status == TaskStatusEnum.CANCELLED:
+            raise TaskAlreadyCancelledException(
+                task_id=self.task_id, attempted_operation="start"
+            )
+        elif self.status != TaskStatusEnum.PENDING:
+            raise InvalidTaskTransitionException(
+                task_id=self.task_id,
+                current_status=self.status.value,
+                target_status=TaskStatusEnum.IN_PROGRESS.value,
             )
 
-        if not TaskStatusEnum.can_transition_to(
-            self.status.value, TaskStatusEnum.COMPLETED.value
-        ):
-            raise TaskStateTransitionException(
-                f"Cannot transition from {self.status} to {TaskStatusEnum.COMPLETED}"
-            )
-
-        self.status = TaskStatusEnum.COMPLETED
-        self.completed_at = datetime.now(timezone.utc)
+        self.status = TaskStatusEnum.IN_PROGRESS
         self._update_timestamp()
 
     def cancel_task(self) -> None:
@@ -203,105 +154,50 @@ class TaskEntity:
         Cancel the task
 
         Raises:
-            TaskStateTransitionException: If transition is not allowed
-            TaskAlreadyCompletedException: If task is already completed
+            TaskStateException: If task cannot be cancelled
         """
         if self.status.is_terminal():
-            raise TaskAlreadyCompletedException("Cannot cancel a terminal task")
-
-        if not TaskStatusEnum.can_transition_to(
-            self.status.value, TaskStatusEnum.CANCELLED.value
-        ):
-            raise TaskStateTransitionException(
-                f"Cannot transition from {self.status} to {TaskStatusEnum.CANCELLED}"
+            raise InvalidTaskTransitionException(
+                task_id=self.task_id,
+                current_status=self.status.value,
+                target_status=TaskStatusEnum.CANCELLED.value,
             )
 
         self.status = TaskStatusEnum.CANCELLED
         self._update_timestamp()
 
-    def update_title(self, new_title: str) -> None:
+    def update_task(
+        self, title: Optional[str] = None, description: Optional[str] = None
+    ) -> None:
         """
-        Update task title with validation
+        Update task title and/or description
 
         Args:
-            new_title: New title for the task
+            title: New title (optional)
+            description: New description (optional)
 
         Raises:
-            TaskValidationException: If new title is invalid
-            TaskAlreadyCompletedException: If task is completed
+            TaskStateException: If task cannot be updated
         """
         if self.status.is_terminal():
             raise TaskAlreadyCompletedException(
-                "Cannot update completed or cancelled task"
+                task_id=self.task_id, attempted_operation="update"
             )
 
-        old_title = self.title
-        self.title = new_title
+        if title is not None:
+            self.title = title
+        if description is not None:
+            self.description = description
 
-        try:
-            self._validate_title()
-            self._update_timestamp()
-        except TaskValidationException:
-            # Rollback on validation failure
-            self.title = old_title
-            raise
-
-    def update_description(self, new_description: str) -> None:
-        """
-        Update task description with validation
-
-        Args:
-            new_description: New description for the task
-
-        Raises:
-            TaskValidationException: If new description is invalid
-            TaskAlreadyCompletedException: If task is completed
-        """
-        if self.status.is_terminal():
-            raise TaskAlreadyCompletedException(
-                "Cannot update completed or cancelled task"
-            )
-
-        old_description = self.description
-        self.description = new_description
-
-        try:
-            self._validate_description()
-            self._update_timestamp()
-        except TaskValidationException:
-            # Rollback on validation failure
-            self.description = old_description
-            raise
-
-    def change_priority(self, new_priority: TaskPriorityEnum) -> None:
-        """
-        Change task priority
-
-        Args:
-            new_priority: New priority for the task
-
-        Raises:
-            TaskAlreadyCompletedException: If task is completed
-        """
-        if self.status.is_terminal():
-            raise TaskAlreadyCompletedException(
-                "Cannot change priority of completed or cancelled task"
-            )
-
-        self.priority = new_priority
         self._update_timestamp()
 
     def is_active(self) -> bool:
-        """Check if task is active (can be worked on)"""
-        return self.status.is_active()
+        """Check if task is in an active state"""
+        return not self.status.is_terminal()
 
     def is_completed(self) -> bool:
         """Check if task is completed"""
         return self.status.is_completed()
-
-    def is_cancelled(self) -> bool:
-        """Check if task is cancelled"""
-        return self.status.is_cancelled()
 
     def is_overdue(
         self, days_threshold: int = TaskConstants.TASK_COMPLETION_TIMEOUT_DAYS
@@ -325,36 +221,10 @@ class TaskEntity:
         """Get task age in days since creation"""
         return (datetime.now(timezone.utc) - self.created_at).days
 
-    def to_dict(self) -> dict:
-        """Convert entity to dictionary for serialization"""
-        return {
-            "task_id": str(self.task_id),
-            "title": self.title,
-            "description": self.description,
-            "user_id": self.user_id,
-            "status": self.status.value,
-            "priority": self.priority.value,
-            "created_at": self.created_at.isoformat(),
-            "completed_at": (
-                self.completed_at.isoformat() if self.completed_at else None
-            ),
-            "updated_at": (self.updated_at.isoformat() if self.updated_at else None),
-            "is_active": self.is_active(),
-            "is_completed": self.is_completed(),
-            "age_in_days": self.get_age_in_days(),
-        }
+    def _update_timestamp(self) -> None:
+        """Update the updated_at timestamp"""
+        self.updated_at = datetime.now(timezone.utc)
 
     def __str__(self) -> str:
         """String representation of the task"""
         return f"Task({self.task_id}): {self.title} [{self.status.value}]"
-
-    def __repr__(self) -> str:
-        """Detailed string representation for debugging"""
-        return (
-            f"TaskEntity("
-            f"task_id={self.task_id}, "
-            f"title='{self.title}', "
-            f"status={self.status.value}, "
-            f"user_id={self.user_id}"
-            f")"
-        )

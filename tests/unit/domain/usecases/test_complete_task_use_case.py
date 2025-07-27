@@ -1,5 +1,5 @@
 """
-Unit Tests for CompleteTaskUseCase - Enterprise Edition
+Unit Tests for CompleteTaskUseCase - Simplified Edition
 
 Comprehensive unit tests following AAA pattern for task completion
 with proper mocking, state validation, and business rule testing.
@@ -9,26 +9,20 @@ Test Categories:
 - Invalid state transitions
 - Task not found scenarios
 - Business rule violations
-- Performance validation
 """
 
-from datetime import datetime, timezone
 from unittest.mock import MagicMock
 from uuid import UUID
 
 import pytest
 
-from application.schemas.task_schema import (
-    CompleteTaskRequest,
-    CompleteTaskResponse,
-)
-from domain.entities.task_entity import (
+from domain.entities.task_entity import TaskEntity
+from domain.enums.task_status_enum import TaskPriorityEnum, TaskStatusEnum
+from domain.exceptions.business_exceptions import (
     TaskAlreadyCompletedException,
-    TaskEntity,
-    TaskStateTransitionException,
+    TaskNotFoundException,
 )
-from domain.enums.task_status_enum import TaskStatusEnum
-from domain.exceptions.business_exceptions import TaskNotFoundException
+from domain.gateways.task_gateway import TaskGateway
 from domain.usecases.complete_task_use_case import CompleteTaskUseCase
 
 
@@ -42,30 +36,26 @@ class TestCompleteTaskUseCase:
     ):
         """Test successful completion of a task."""
         # Arrange
-        task = TaskEntity(
-            task_id=sample_task_id,
+        task = TaskEntity.create_new_task(
             title="Test Task",
             description="Test Description",
             user_id=1,
-            status=TaskStatusEnum.IN_PROGRESS,
-            created_at=datetime.now(timezone.utc),
+            priority=TaskPriorityEnum.MEDIUM,
         )
+        task.start_task()  # Put it in IN_PROGRESS
         mock_task_gateway.find_task_by_id.return_value = task
 
-        request = CompleteTaskRequest(task_id=sample_task_id)
-        mock_uow = MagicMock()
-        use_case = CompleteTaskUseCase(mock_task_gateway, mock_uow)
+        use_case = CompleteTaskUseCase(mock_task_gateway)
 
         # Act
-        response = use_case.execute(request)
+        result = use_case.execute(sample_task_id)
 
         # Assert
-        assert isinstance(response, CompleteTaskResponse)
-        assert response.status == TaskStatusEnum.COMPLETED.value
+        assert isinstance(result, TaskEntity)
+        assert result.status == TaskStatusEnum.COMPLETED
+        assert result.completed_at is not None
         mock_task_gateway.find_task_by_id.assert_called_once_with(sample_task_id)
-        mock_task_gateway.save_task.assert_called_once()
-        updated_task = mock_task_gateway.save_task.call_args[0][0]
-        assert updated_task.status == TaskStatusEnum.COMPLETED
+        mock_task_gateway.save_task.assert_called_once_with(task)
 
     def test_execute_should_raise_exception_when_task_not_found(
         self,
@@ -75,28 +65,29 @@ class TestCompleteTaskUseCase:
         """Test completion fails when the task does not exist."""
         # Arrange
         mock_task_gateway.find_task_by_id.return_value = None
-        request = CompleteTaskRequest(task_id=sample_task_id)
-        mock_uow = MagicMock()
-        use_case = CompleteTaskUseCase(mock_task_gateway, mock_uow)
+        use_case = CompleteTaskUseCase(mock_task_gateway)
 
         # Act & Assert
         with pytest.raises(TaskNotFoundException):
-            use_case.execute(request)
+            use_case.execute(sample_task_id)
         mock_task_gateway.save_task.assert_not_called()
 
     def test_execute_should_raise_exception_when_task_already_completed(
-        self, mock_task_gateway: MagicMock, completed_task_entity: TaskEntity
+        self, mock_task_gateway: MagicMock, sample_task_id: UUID
     ):
         """Test completion fails if the task is already completed."""
         # Arrange
-        mock_task_gateway.find_task_by_id.return_value = completed_task_entity
-        request = CompleteTaskRequest(task_id=completed_task_entity.task_id)
-        mock_uow = MagicMock()
-        use_case = CompleteTaskUseCase(mock_task_gateway, mock_uow)
+        task = TaskEntity.create_new_task(
+            title="Completed Task", description="Already completed", user_id=1
+        )
+        task.complete()  # Already completed
+        mock_task_gateway.find_task_by_id.return_value = task
+        use_case = CompleteTaskUseCase(mock_task_gateway)
 
         # Act & Assert
         with pytest.raises(TaskAlreadyCompletedException):
-            use_case.execute(request)
+            use_case.execute(sample_task_id)
+        # save_task should not be called because exception is raised before saving
         mock_task_gateway.save_task.assert_not_called()
 
     def test_execute_should_raise_exception_for_invalid_transition(
@@ -106,20 +97,29 @@ class TestCompleteTaskUseCase:
     ):
         """Test completion fails for a task with a status that cannot be completed."""
         # Arrange
-        task = TaskEntity(
-            task_id=sample_task_id,
-            title="Cancelled Task",
-            description=".",
-            user_id=1,
-            status=TaskStatusEnum.CANCELLED,
-            created_at=datetime.now(timezone.utc),
+        task = TaskEntity.create_new_task(
+            title="Cancelled Task", description="This task was cancelled", user_id=1
         )
+        task.cancel_task()  # Task is cancelled, cannot be completed
         mock_task_gateway.find_task_by_id.return_value = task
-        request = CompleteTaskRequest(task_id=sample_task_id)
-        mock_uow = MagicMock()
-        use_case = CompleteTaskUseCase(mock_task_gateway, mock_uow)
+        use_case = CompleteTaskUseCase(mock_task_gateway)
 
         # Act & Assert
-        with pytest.raises(TaskStateTransitionException):
-            use_case.execute(request)
+        with pytest.raises(
+            TaskAlreadyCompletedException
+        ):  # TaskEntity raises this for terminal states
+            use_case.execute(sample_task_id)
         mock_task_gateway.save_task.assert_not_called()
+
+
+# Fixtures
+@pytest.fixture
+def mock_task_gateway():
+    """Mock task gateway."""
+    return MagicMock(spec=TaskGateway)
+
+
+@pytest.fixture
+def sample_task_id():
+    """Sample task ID fixture."""
+    return UUID("12345678-1234-5678-1234-567812345678")

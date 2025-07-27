@@ -30,7 +30,7 @@ Aunque la base de datos solo contiene la tabla `tasks`, existe una relación con
 
 -   **Cada Tarea pertenece a un Usuario**:
     -   La tabla `tasks` tiene una columna `user_id`. Este campo no es una clave foránea a otra tabla de la base de datos, sino un identificador que vincula la tarea con un usuario específico.
-    -   La información de los usuarios (a la que apunta `user_id`) se gestiona externamente, en un archivo `dummyusers.json`.
+    -   La información de los usuarios (a la que apunta `user_id`) se gestiona a través del `FakeUserService`, un repositorio en memoria para desarrollo y testing.
 
 ---
 

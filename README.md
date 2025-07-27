@@ -1,8 +1,28 @@
-# 🪙 Accounting App Backend
+# 📋 Task Manager Contable
 
-Backend para una aplicación de contabilidad, desarrollado en Python con Flask y siguiendo los principios de **Clean Architecture**.
+Backend para un **Task Manager especializado en tareas contables**, desarrollado en Python con Flask y siguiendo los principios de **Clean Architecture**.
 
-Este proyecto está diseñado para ser escalable, mantenible y fácil de probar, separando las responsabilidades en capas claras: Dominio, Aplicación e Infraestructura.
+Este sistema permite a los equipos de contabilidad gestionar, organizar y dar seguimiento a sus tareas diarias de manera eficiente, desde conciliaciones bancarias hasta cierre de períodos fiscales.
+
+---
+
+## 🎯 ¿Qué es Task Manager Contable?
+
+**Task Manager Contable** es una herramienta de gestión de tareas específicamente diseñada para departamentos de contabilidad. No es un sistema contable completo, sino un organizador de las actividades contables que facilita:
+
+- ✅ **Gestión de tareas contables**: Crear, asignar y dar seguimiento a tareas específicas
+- 👥 **Colaboración de equipo**: Asignar tareas a diferentes miembros del equipo contable
+- 📊 **Estados de seguimiento**: Pending, In Progress, Completed, Cancelled
+- 🔄 **Priorización**: Gestión de prioridades (Low, Medium, High, Urgent)
+- 📈 **Organización por usuario**: Visualizar tareas asignadas a cada contador
+
+### Casos de Uso Típicos
+- Preparación de estados financieros
+- Conciliaciones bancarias
+- Procesamiento de facturas
+- Cierre mensual/anual
+- Auditorías internas
+- Tareas de cumplimiento fiscal
 
 ---
 
@@ -43,6 +63,7 @@ Una vez que la base de datos esté corriendo y configurada en tu archivo `.env`,
 ```bash
 poetry run alembic upgrade head
 ```
+
 ### 4. Ejecutar la Aplicación
 
 Con el entorno configurado y la base de datos lista, puedes iniciar el servidor:
@@ -53,7 +74,34 @@ poetry run python application/main.py
 
 El servidor estará disponible en `http://127.0.0.1:8000`.
 
-### 5. Ejecutar Validaciones de Calidad
+### 5. Endpoints Principales
+
+Una vez que el servidor esté corriendo, puedes interactuar con estos endpoints principales:
+
+```bash
+# Health check
+GET /api/health
+
+# Crear una nueva tarea
+POST /api/tasks
+{
+  "title": "Conciliación bancaria enero",
+  "description": "Conciliar cuenta corriente principal",
+  "user_id": 1,
+  "priority": "high"
+}
+
+# Completar una tarea
+PUT /api/tasks/{task_id}/complete
+
+# Listar tareas por usuario
+GET /api/users/{user_id}/tasks
+
+# Listar todos los usuarios
+GET /api/users
+```
+
+### 6. Ejecutar Validaciones de Calidad
 
 Para asegurar la calidad del código, puedes ejecutar las siguientes herramientas:
 
@@ -73,6 +121,27 @@ poetry run mypy .
 
 ---
 
+## 🏗️ Arquitectura del Sistema
+
+El proyecto sigue **Clean Architecture** con estas capas:
+
+- **🌟 Domain**: Entidades de negocio (Task, User) y reglas de negocio
+- **⚙️ Application**: Casos de uso (CreateTask, CompleteTask, ListTasks)
+- **🔌 Infrastructure**: Adaptadores externos (HTTP routes, Database, etc.)
+
+### Estructura del Proyecto
+```
+accounting_app/
+├── domain/           # Capa de dominio (entidades, use cases)
+├── application/      # Configuración y punto de entrada
+├── infrastructure/   # Adaptadores y drivers externos
+├── tests/            # Pruebas unitarias y de integración
+├── migration/        # Migraciones de base de datos (Alembic)
+└── docs/             # Documentación del proyecto
+```
+
+---
+
 ## 📚 Documentación Completa
 
 Para una comprensión más profunda del proyecto, consulta la documentación detallada en los siguientes enlaces:
@@ -85,7 +154,21 @@ Para una comprensión más profunda del proyecto, consulta la documentación det
 -   **[Despliegue](./docs/deployment/process.md)**: Proceso de despliegue e infraestructura.
 -   **[Flujo de Git](./docs/git/workflow.md)**: Describe el modelo de ramificación utilizado.
 
-Para obtener pautas detalladas sobre cómo contribuir, consulta el archivo [CONTRIBUTING.md](./CONTRIBUTING.md).
+---
+
+## 🤝 Contribuciones
+
+Este proyecto está diseñado para ser mantenible y extensible. Si deseas contribuir:
+
+1. Lee nuestro [CONTRIBUTING.md](./CONTRIBUTING.md)
+2. Crea un fork del proyecto
+3. Desarrolla tu feature siguiendo Clean Architecture
+4. Asegúrate de que todas las pruebas pasen
+5. Envía un Pull Request
 
 ---
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](./LICENSE) para más detalles.
 

@@ -24,7 +24,6 @@ from infrastructure.driven_adapters.repositories.task_repository import (
 from infrastructure.driven_adapters.repositories.user_repository_fake import (
     FakeUserService,
 )
-from infrastructure.helpers.database.unit_of_work import UnitOfWork
 
 
 class Container:
@@ -71,7 +70,7 @@ class Container:
     def complete_task_use_case(self) -> CompleteTaskUseCase:
         if self._complete_task_use_case is None:
             self._complete_task_use_case = CompleteTaskUseCase(
-                task_gateway=self.task_gateway, unit_of_work=UnitOfWork()
+                task_gateway=self.task_gateway
             )
         return self._complete_task_use_case
 
@@ -89,7 +88,6 @@ class Container:
             self._list_tasks_by_user_use_case = ListTasksByUserUseCase(
                 task_gateway=self.task_gateway,
                 user_gateway=self.user_gateway,
-                unit_of_work=UnitOfWork(),
             )
         return self._list_tasks_by_user_use_case
 

@@ -1,6 +1,6 @@
-# Pautas para Contribuir al Proyecto
+# Pautas para Contribuir al Task Manager Contable
 
-¡Antes que nada, gracias por considerar contribuir a este proyecto! Agradecemos cualquier ayuda que puedas proporcionar. Siguiendo estas pautas, nos ayudarás a mantener la calidad del código y la eficiencia del proceso de desarrollo.
+¡Antes que nada, gracias por considerar contribuir al **Task Manager Contable**! Este sistema ayuda a equipos de contabilidad a gestionar sus tareas diarias de manera eficiente. Agradecemos cualquier ayuda que puedas proporcionar para mejorarlo.
 
 ## Tabla de Contenidos
 

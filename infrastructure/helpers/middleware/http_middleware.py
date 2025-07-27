@@ -20,7 +20,6 @@ from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler
 from infrastructure.helpers.logger.logger_config import (
     generate_request_id,
     get_logger,
-    get_performance_logger,
     get_request_logger,
     get_security_logger,
     logging_context,
@@ -128,53 +127,11 @@ class ErrorHandlingMiddleware:
             return [response_body.encode()]
 
 
-class PerformanceMonitoringMiddleware:
-    """
-    Middleware for performance monitoring and metrics
-
-    Tracks request duration, response sizes, and performance metrics
-    for monitoring and alerting.
-    """
-
-    def __init__(self, app: Flask):
-        self.app = app
-        self.logger = get_performance_logger()
-
-    def __call__(self, environ, start_response):
-        start_time = time.time()
-        request_id = environ.get("request_id", "unknown")
-
-        # Track request start
-        with logging_context(request_id=request_id):
-            self.logger.debug("performance_monitoring_started")
-
-        # Process request
-        response = self.app(environ, start_response)
-
-        # Calculate metrics
-        duration = time.time() - start_time
-        path = environ.get("PATH_INFO", "")
-        method = environ.get("REQUEST_METHOD", "")
-
-        # Log performance metrics
-        with logging_context(request_id=request_id):
-            self.logger.info(
-                "request_performance",
-                path=path,
-                method=method,
-                duration_ms=duration * 1000,
-                duration_seconds=duration,
-            )
-
-        return response
-
-
 class SecurityLoggingMiddleware:
     """
-    Middleware for security event logging
+    Middleware for basic security event logging
 
-    Logs security-relevant events like authentication failures,
-    suspicious requests, and access patterns.
+    Logs suspicious requests and potential security threats.
     """
 
     def __init__(self, app: Flask):
@@ -182,45 +139,27 @@ class SecurityLoggingMiddleware:
         self.logger = get_security_logger()
 
     def __call__(self, environ, start_response):
-        request_id = environ.get("request_id", "unknown")
         path = environ.get("PATH_INFO", "")
-        method = environ.get("REQUEST_METHOD", "")
         remote_addr = environ.get("REMOTE_ADDR", "")
-        user_agent = environ.get("HTTP_USER_AGENT", "")
 
-        # Check for suspicious patterns
-        suspicious_patterns = [
-            "/admin",
-            "/config",
-            "/.env",
-            "/wp-admin",
-            "sqlmap",
-            "nikto",
-            "nmap",
-            "dirb",
-        ]
+        # Check for suspicious patterns (basic security monitoring)
+        suspicious_patterns = ["/admin", "/.env", "/config", "wp-admin"]
 
-        is_suspicious = any(
-            pattern in path.lower() or pattern in user_agent.lower()
-            for pattern in suspicious_patterns
-        )
+        is_suspicious = any(pattern in path.lower() for pattern in suspicious_patterns)
 
         if is_suspicious:
-            with logging_context(request_id=request_id):
-                self.logger.warning(
-                    "suspicious_request",
-                    path=path,
-                    method=method,
-                    remote_addr=remote_addr,
-                    user_agent=user_agent,
-                )
+            self.logger.warning(
+                "suspicious_request_detected",
+                path=path,
+                remote_addr=remote_addr,
+            )
 
         return self.app(environ, start_response)
 
 
 def configure_middleware_stack(app: Flask) -> None:
     """
-    Configure the complete middleware stack for the application
+    Configure the essential middleware stack for the application
 
     Args:
         app: Flask application instance
@@ -234,7 +173,6 @@ def configure_middleware_stack(app: Flask) -> None:
 
     # Apply middleware in order (last applied = first executed)
     app.wsgi_app = SecurityLoggingMiddleware(app.wsgi_app)
-    app.wsgi_app = PerformanceMonitoringMiddleware(app.wsgi_app)
     app.wsgi_app = ErrorHandlingMiddleware(app.wsgi_app)
     app.wsgi_app = LoggingMiddleware(app.wsgi_app)
 
@@ -254,4 +192,4 @@ def configure_middleware_stack(app: Flask) -> None:
             window_size=settings.rate_limit.window_size_seconds,
         )
 
-    logger.info("middleware_stack_configured")
+    logger.info("essential_middleware_stack_configured")

@@ -157,36 +157,25 @@ def _register_blueprints(app: Flask) -> None:
 
 
 def _register_health_endpoints(app: Flask) -> None:
-    """Register health check and monitoring endpoints"""
+    """Register health check and version endpoints"""
     logger.debug("registering_health_endpoints")
 
     @app.route("/api/health")
     def health_check():
-        """Enhanced health check with system metrics"""
+        """Basic health check with database connectivity"""
         logger.debug("health_check_requested")
 
         try:
             # Check database connectivity
             db_status = _check_database_health()
 
-            # Get system metrics
-            memory_status = _check_memory_health()
-            disk_status = _check_disk_health()
-
             health_data = {
                 "status": (
                     "healthy" if db_status["status"] == "healthy" else "unhealthy"
                 ),
-                "service": "accounting-app",
-                "version": settings.application.version,
-                "environment": settings.application.environment.value,
+                "service": "task-manager",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "uptime_seconds": time.time() - app.start_time,
-                "checks": {
-                    "database": db_status,
-                    "memory": memory_status,
-                    "disk": disk_status,
-                },
+                "database": db_status,
             }
 
             status_code = 200 if health_data["status"] == "healthy" else 503
@@ -207,70 +196,6 @@ def _register_health_endpoints(app: Flask) -> None:
                 503,
             )
 
-    @app.route("/api/health/detailed")
-    def detailed_health_check():
-        """Comprehensive health check with all validations"""
-        logger.debug("detailed_health_check_requested")
-
-        try:
-            checks = {}
-
-            # Database check
-            checks["database"] = _check_database_health()
-
-            # System checks
-            checks["memory"] = _check_memory_health()
-            checks["disk"] = _check_disk_health()
-
-            # Configuration check
-            checks["configuration"] = {
-                "status": "healthy",
-                "environment": settings.application.environment.value,
-                "log_level": settings.application.log_level,
-                "debug_mode": settings.application.debug,
-            }
-
-            # API configuration check
-            checks["api"] = {
-                "status": "healthy",
-                "host": settings.api.host,
-                "port": settings.api.port,
-                "cors_enabled": bool(settings.api.cors_origins),
-            }
-
-            # Determine overall status
-            overall_status = "healthy"
-            if any(check.get("status") == "unhealthy" for check in checks.values()):
-                overall_status = "unhealthy"
-
-            health_data = {
-                "status": overall_status,
-                "service": "accounting-app",
-                "version": settings.application.version,
-                "environment": settings.application.environment.value,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "uptime_seconds": time.time() - app.start_time,
-                "checks": checks,
-            }
-
-            status_code = 200 if overall_status == "healthy" else 503
-            logger.info("detailed_health_check_completed", status=overall_status)
-
-            return jsonify(health_data), status_code
-
-        except Exception as e:
-            logger.error("detailed_health_check_failed", error=str(e))
-            return (
-                jsonify(
-                    {
-                        "status": "unhealthy",
-                        "error": str(e),
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                    }
-                ),
-                503,
-            )
-
     @app.route("/api/version")
     def version_info():
         """Get application version information"""
@@ -278,27 +203,10 @@ def _register_health_endpoints(app: Flask) -> None:
             {
                 "version": "1.0.0",
                 "environment": settings.application.environment.value,
-                "service": "accounting-app",
+                "service": "task-manager",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )
-
-    @app.route("/api/test/error/<error_type>")
-    def test_error(error_type: str):
-        """Test endpoint to generate different types of errors"""
-        if error_type == "validation":
-            from domain.exceptions.business_exceptions import ValidationException
-            raise ValidationException("Campo requerido faltante", field_name="email")
-        elif error_type == "not_found":
-            from domain.exceptions.business_exceptions import UserNotFoundException
-            raise UserNotFoundException("Usuario no encontrado", user_id=999)
-        elif error_type == "business":
-            from domain.exceptions.business_exceptions import BusinessRuleViolationException
-            raise BusinessRuleViolationException("Regla de negocio violada")
-        elif error_type == "internal":
-            raise ValueError("Error interno de prueba")
-        else:
-            return jsonify({"message": "Tipo de error no reconocido"}), 400
 
 
 def _configure_error_handlers(app: Flask) -> None:
@@ -358,86 +266,26 @@ def _configure_error_handlers(app: Flask) -> None:
     def handle_general_exception(error):
         """Handle all unhandled exceptions using HTTPErrorHandler"""
         logger.error("unhandled_exception", error=str(error), exc_info=True)
-        
+
         # Use HTTPErrorHandler to get proper response
         response_dict, status_code = HTTPErrorHandler.handle_exception(error)
-        
+
         return jsonify(response_dict), status_code
 
 
 def _check_database_health() -> Dict[str, Any]:
-    """Check database health with detailed metrics"""
+    """Check database health connectivity"""
     try:
-        start_time = time.time()
-        # Usar el método health_check de la instancia
+        # Basic database connectivity check
         is_healthy = database_connection.health_check()
-        response_time = time.time() - start_time
 
         if is_healthy:
-            return {
-                "status": "healthy",
-                "response_time_ms": round(response_time * 1000, 2),
-                "connection_pool_size": database_connection._config.pool_size,
-            }
+            return {"status": "healthy"}
         else:
-            return {
-                "status": "unhealthy",
-                "error": "Database health check failed",
-                "response_time_ms": round(response_time * 1000, 2),
-            }
+            return {"status": "unhealthy", "error": "Database connectivity failed"}
     except Exception as e:
         logger.error("database_health_check_failed", error=str(e))
         return {"status": "unhealthy", "error": str(e)}
-
-
-def _check_memory_health() -> Dict[str, Any]:
-    """Check memory usage metrics"""
-    try:
-        import psutil
-
-        memory = psutil.virtual_memory()
-
-        return {
-            "status": "healthy" if memory.percent < 90 else "warning",
-            "used_percent": memory.percent,
-            "available_mb": memory.available // 1024 // 1024,
-            "total_mb": memory.total // 1024 // 1024,
-        }
-    except ImportError:
-        logger.warning("psutil not available, skipping memory health check")
-        return {
-            "status": "unknown",
-            "error": "psutil module not available",
-            "message": "Install psutil for memory monitoring"
-        }
-    except Exception as e:
-        logger.error("memory_health_check_failed", error=str(e))
-        return {"status": "unknown", "error": str(e)}
-
-
-def _check_disk_health() -> Dict[str, Any]:
-    """Check disk usage metrics"""
-    try:
-        import psutil
-
-        disk = psutil.disk_usage("/")
-
-        return {
-            "status": "healthy" if disk.percent < 90 else "warning",
-            "used_percent": disk.percent,
-            "free_gb": disk.free // 1024 // 1024 // 1024,
-            "total_gb": disk.total // 1024 // 1024 // 1024,
-        }
-    except ImportError:
-        logger.warning("psutil not available, skipping disk health check")
-        return {
-            "status": "unknown",
-            "error": "psutil module not available",
-            "message": "Install psutil for disk monitoring"
-        }
-    except Exception as e:
-        logger.error("disk_health_check_failed", error=str(e))
-        return {"status": "unknown", "error": str(e)}
 
 
 def create_application() -> Flask:

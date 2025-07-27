@@ -53,9 +53,7 @@ class DatabaseConfig(BaseSettings):
     host: str = Field(default="127.0.0.1", description="Database host address")
     port: int = Field(default=3306, ge=1, le=65535, description="Database port number")
     name: str = Field(default="accounting", min_length=1, description="Database name")
-    username: str = Field(
-        default="root", min_length=1, description="Database username"
-    )
+    username: str = Field(default="root", min_length=1, description="Database username")
     password: SecretStr = Field(
         default="root", min_length=1, description="Database password"
     )

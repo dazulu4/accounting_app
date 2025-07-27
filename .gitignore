@@ -40,6 +40,7 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
+.mypy_cache/
 
 # Artefactos de Build y Despliegue de AWS SAM
 # =============================================================================

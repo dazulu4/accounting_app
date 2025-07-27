@@ -23,8 +23,13 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from domain.constants.task_constants import TaskDatabaseConstants
-from domain.entities.task_entity import TaskDomainException, TaskEntity
+from domain.entities.task_entity import TaskEntity
 from domain.enums.task_status_enum import TaskPriorityEnum, TaskStatusEnum
+from domain.exceptions.business_exceptions import (
+    DatabaseException,
+    TaskNotFoundException,
+    ValidationException,
+)
 from domain.gateways.task_gateway import TaskGateway
 from infrastructure.helpers.database.connection import Base
 
@@ -132,7 +137,7 @@ class TaskModelMapper:
             TaskEntity: Domain entity instance
 
         Raises:
-            TaskDomainException: If model data is invalid
+            ValidationException: If model data is invalid
         """
         try:
             # Convert enum values with validation
@@ -155,7 +160,11 @@ class TaskModelMapper:
                 "Failed to convert TaskModel to TaskEntity",
                 extra={"task_id": str(model.task_id), "error": str(e)},
             )
-            raise TaskDomainException(f"Invalid task data in database: {e}")
+            raise ValidationException(
+                message=f"Invalid task data in database: {e}",
+                field_name="task_data",
+                field_value=str(model),
+            )
 
 
 class TaskRepository(TaskGateway):
@@ -184,7 +193,7 @@ class TaskRepository(TaskGateway):
             task: TaskEntity to save
 
         Raises:
-            TaskDomainException: If save operation fails
+            DatabaseException: If save operation fails
         """
         try:
             model = self._mapper.entity_to_model(task)
@@ -208,7 +217,10 @@ class TaskRepository(TaskGateway):
                 "Database integrity error saving task",
                 extra={"task_id": str(task.task_id), "error": str(e)},
             )
-            raise TaskDomainException(f"Failed to save task due to data integrity: {e}")
+            raise DatabaseException(
+                message=f"Failed to save task due to data integrity: {e}",
+                operation="save_task",
+            )
 
         except SQLAlchemyError as e:
             self._session.rollback()
@@ -216,7 +228,9 @@ class TaskRepository(TaskGateway):
                 "Database error saving task",
                 extra={"task_id": str(task.task_id), "error": str(e)},
             )
-            raise TaskDomainException(f"Database error saving task: {e}")
+            raise DatabaseException(
+                message=f"Database error saving task: {e}", operation="save_task"
+            )
 
     def find_task_by_id(self, task_id: UUID) -> Optional[TaskEntity]:
         """
@@ -245,7 +259,9 @@ class TaskRepository(TaskGateway):
                 "Database error finding task",
                 extra={"task_id": str(task_id), "error": str(e)},
             )
-            raise TaskDomainException(f"Database error finding task: {e}")
+            raise DatabaseException(
+                message=f"Database error finding task: {e}", operation="find_task_by_id"
+            )
 
     def find_tasks_by_user_id(self, user_id: int) -> List[TaskEntity]:
         """
@@ -282,7 +298,10 @@ class TaskRepository(TaskGateway):
                 "Database error finding tasks by user",
                 extra={"user_id": user_id, "error": str(e)},
             )
-            raise TaskDomainException(f"Database error finding tasks: {e}")
+            raise DatabaseException(
+                message=f"Database error finding tasks: {e}",
+                operation="find_tasks_by_user_id",
+            )
 
     def find_tasks_by_status(self, status: TaskStatusEnum) -> List[TaskEntity]:
         """
@@ -319,7 +338,10 @@ class TaskRepository(TaskGateway):
                 "Database error finding tasks by status",
                 extra={"status": status.value, "error": str(e)},
             )
-            raise TaskDomainException(f"Database error finding tasks: {e}")
+            raise DatabaseException(
+                message=f"Database error finding tasks: {e}",
+                operation="find_tasks_by_status",
+            )
 
     def delete_task(self, task_id: UUID) -> bool:
         """
@@ -357,7 +379,9 @@ class TaskRepository(TaskGateway):
                 "Database error deleting task",
                 extra={"task_id": str(task_id), "error": str(e)},
             )
-            raise TaskDomainException(f"Database error deleting task: {e}")
+            raise DatabaseException(
+                message=f"Database error deleting task: {e}", operation="delete_task"
+            )
 
     def count_tasks_by_user(self, user_id: int) -> int:
         """
@@ -396,4 +420,7 @@ class TaskRepository(TaskGateway):
                 "Database error counting tasks",
                 extra={"user_id": user_id, "error": str(e)},
             )
-            raise TaskDomainException(f"Database error counting tasks: {e}")
+            raise DatabaseException(
+                message=f"Database error counting tasks: {e}",
+                operation="count_tasks_by_user",
+            )

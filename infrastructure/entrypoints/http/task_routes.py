@@ -41,36 +41,18 @@ logger = get_logger(__name__)
 @task_blueprint.route("", methods=["POST"])
 def create_task():
     """Crea una nueva tarea."""
-    # Get request context
-    request_id = getattr(request, "request_id", "unknown")
-    user_agent = request.headers.get("User-Agent", "unknown")
-    remote_addr = request.remote_addr
-
-    logger.info(
-        "create_task_request_received",
-        request_id=request_id,
-        user_agent=user_agent,
-        remote_addr=remote_addr,
-    )
+    logger.debug("create_task_request_received")
 
     try:
         # Validate request data
         data = CreateTaskRequest(**request.json)
-
-        logger.info(
-            "create_task_data_validated",
-            request_id=request_id,
-            user_id=data.user_id,
-            title=(data.title[:50] + "..." if len(data.title) > 50 else data.title),
-        )
 
         # Obtener el caso de uso desde el contenedor
         use_case = current_app.container.create_task_use_case
         response_dto = use_case.execute(data)
 
         logger.info(
-            "create_task_successful",
-            request_id=request_id,
+            "task_created_successfully",
             task_id=response_dto.id,
             user_id=data.user_id,
         )
@@ -78,40 +60,22 @@ def create_task():
         return jsonify(response_dto.model_dump()), 201
 
     except ValidationError as e:
-        logger.warning(
-            "create_task_validation_error",
-            request_id=request_id,
-            errors=str(e.errors()),
-            user_agent=user_agent,
-        )
+        logger.warning("task_creation_validation_error", errors=str(e.errors()))
         response_data, status_code = HTTPErrorHandler.handle_exception(e)
         return jsonify(response_data), status_code
 
     except UserNotFoundException as e:
-        logger.warning(
-            "create_task_user_not_found",
-            request_id=request_id,
-            user_id=data.user_id if "data" in locals() else "unknown",
-        )
+        logger.warning("task_creation_user_not_found")
         response_data, status_code = HTTPErrorHandler.handle_exception(e)
         return jsonify(response_data), status_code
 
     except UserNotActiveException as e:
-        logger.warning(
-            "create_task_user_inactive",
-            request_id=request_id,
-            user_id=data.user_id if "data" in locals() else "unknown",
-        )
+        logger.warning("task_creation_user_not_active")
         response_data, status_code = HTTPErrorHandler.handle_exception(e)
         return jsonify(response_data), status_code
 
     except Exception as e:
-        logger.error(
-            "create_task_unexpected_error",
-            request_id=request_id,
-            error_type=type(e).__name__,
-            error_message=str(e),
-        )
+        logger.error("task_creation_unexpected_error", error_type=type(e).__name__)
         response_data, status_code = HTTPErrorHandler.handle_exception(e)
         return jsonify(response_data), status_code
 
@@ -119,53 +83,22 @@ def create_task():
 @task_blueprint.route("/<uuid:task_id>/complete", methods=["PUT"])
 def complete_task(task_id: UUID):
     """Marca una tarea como completada."""
-    # Get request context
-    request_id = getattr(request, "request_id", "unknown")
-    user_agent = request.headers.get("User-Agent", "unknown")
-    remote_addr = request.remote_addr
-
-    logger.info(
-        "complete_task_request_received",
-        request_id=request_id,
-        task_id=str(task_id),
-        user_agent=user_agent,
-        remote_addr=remote_addr,
-    )
+    logger.debug("complete_task_request_received", task_id=str(task_id))
 
     try:
         # Validate request data
         request_dto = CompleteTaskRequest(task_id=task_id)
 
-        logger.info(
-            "complete_task_data_validated",
-            request_id=request_id,
-            task_id=str(task_id),
-        )
-
         # Obtener el caso de uso desde el contenedor
         use_case = current_app.container.complete_task_use_case
         response_dto = use_case.execute(request_dto)
 
-        logger.info(
-            "complete_task_successful",
-            request_id=request_id,
-            task_id=str(task_id),
-            completion_time=(
-                response_dto.completed_at.isoformat()
-                if response_dto.completed_at
-                else None
-            ),
-        )
+        logger.info("task_completed_successfully", task_id=str(task_id))
 
         return jsonify(response_dto.model_dump()), 200
 
     except ValidationError as e:
-        logger.warning(
-            "complete_task_validation_error",
-            request_id=request_id,
-            task_id=str(task_id),
-            errors=str(e.errors()),
-        )
+        logger.warning("task_completion_validation_error", task_id=str(task_id))
         response_data, status_code = HTTPErrorHandler.handle_exception(e)
         return jsonify(response_data), status_code
 

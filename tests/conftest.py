@@ -28,7 +28,6 @@ from domain.entities.task_entity import TaskEntity
 from domain.enums.task_status_enum import TaskPriorityEnum, TaskStatusEnum
 from domain.gateways.task_gateway import TaskGateway
 from domain.gateways.user_gateway import UserGateway
-from infrastructure.helpers.database.unit_of_work import UnitOfWork
 
 # =============================================================================
 # Test Configuration
@@ -185,22 +184,6 @@ def mock_user_service() -> MagicMock:
     mock_service.is_user_active.return_value = True
 
     return mock_service
-
-
-@pytest.fixture
-def mock_unit_of_work():
-    """Mock Unit of Work for testing"""
-    mock_uow = Mock(spec=UnitOfWork)
-
-    # Configure mock repository
-    mock_task_repo = Mock()
-    mock_uow.task_repository = mock_task_repo
-
-    # Configure context manager behavior
-    mock_uow.__enter__ = Mock(return_value=mock_uow)
-    mock_uow.__exit__ = Mock(return_value=None)
-
-    return mock_uow
 
 
 @pytest.fixture

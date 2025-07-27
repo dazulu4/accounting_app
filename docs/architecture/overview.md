@@ -1,6 +1,6 @@
-#  Arquitectura del Sistema: Visión General
+# Arquitectura del Task Manager Contable
 
-Este documento proporciona una visión general de alto nivel de la arquitectura de software utilizada en este proyecto. El objetivo es ofrecer una comprensión conceptual de cómo está estructurado el sistema y los principios que guían su diseño.
+Este documento proporciona una visión general de alto nivel de la arquitectura de software utilizada en el **Task Manager Contable**. El sistema está diseñado para gestionar tareas contables de manera eficiente siguiendo principios de Clean Architecture.
 
 ## El Modelo de Arquitectura Limpia (Clean Architecture)
 

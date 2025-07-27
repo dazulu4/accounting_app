@@ -18,7 +18,8 @@ logger = get_logger(__name__)
 class RateLimitMiddleware:
     """Simple in-memory rate limiting middleware"""
 
-    def __init__(self, requests_per_second: int = 10, window_size: int = 60):
+    def __init__(self, app, requests_per_second: int = 10, window_size: int = 60):
+        self.app = app
         self.requests_per_second = requests_per_second
         self.window_size = window_size
         self.requests: Dict[str, Deque[float]] = defaultdict(lambda: deque())
@@ -131,10 +132,3 @@ class RateLimitMiddleware:
 
         # Process request normally
         return self.app(environ, start_response)
-
-    def __init__(self, app):
-        """Initialize middleware with the next app in the chain"""
-        self.app = app
-        self.requests_per_second = 10
-        self.window_size = 60
-        self.requests: Dict[str, Deque[float]] = defaultdict(lambda: deque())

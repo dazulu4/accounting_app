@@ -1,6 +1,6 @@
-# Componentes del Stack Tecnológico
+# Stack Tecnológico - Task Manager Contable
 
-Este documento describe las principales herramientas, librerías y frameworks que componen el stack tecnológico de este proyecto.
+Este documento describe las principales herramientas, librerías y frameworks que componen el stack tecnológico del **Task Manager Contable**.
 
 ---
 

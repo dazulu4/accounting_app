@@ -5,8 +5,9 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from domain.entities.task_entity import TaskDomainException, TaskEntity
+from domain.entities.task_entity import TaskEntity
 from domain.enums.task_status_enum import TaskPriorityEnum, TaskStatusEnum
+from domain.exceptions.business_exceptions import DatabaseException, ValidationException
 from infrastructure.driven_adapters.repositories.task_repository import (
     TaskModel,
     TaskModelMapper,
@@ -53,7 +54,7 @@ class TestTaskRepository:
         )
         repo = TaskRepository(mock_session)
 
-        with pytest.raises(TaskDomainException):
+        with pytest.raises(DatabaseException):
             repo.save_task(task_entity)
 
         mock_session.rollback.assert_called_once()
@@ -136,5 +137,5 @@ class TestTaskModelMapper:
             priority="LOW",
             created_at=datetime.now(timezone.utc),
         )
-        with pytest.raises(TaskDomainException):
+        with pytest.raises(ValidationException):
             TaskModelMapper.model_to_entity(model)

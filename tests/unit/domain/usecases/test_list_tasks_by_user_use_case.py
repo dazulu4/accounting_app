@@ -1,11 +1,9 @@
 from unittest.mock import MagicMock
-from uuid import uuid4
 
 import pytest
 
 from domain.entities.task_entity import TaskEntity
 from domain.entities.user_entity import UserEntity
-from domain.enums.task_status_enum import TaskStatusEnum
 from domain.exceptions.business_exceptions import UserNotFoundException
 from domain.usecases.list_tasks_by_user_use_case import ListTasksByUserUseCase
 
@@ -28,36 +26,33 @@ class TestListTasksByUserUseCase:
             status="active",
         )
         tasks = [
-            TaskEntity(
-                task_id=uuid4(),
+            TaskEntity.create_new_task(
                 title="Task 1",
                 description="Desc 1",
                 user_id=user_id,
-                status=TaskStatusEnum.PENDING,
             ),
-            TaskEntity(
-                task_id=uuid4(),
+            TaskEntity.create_new_task(
                 title="Task 2",
                 description="Desc 2",
                 user_id=user_id,
-                status=TaskStatusEnum.COMPLETED,
             ),
         ]
+        tasks[1].complete()  # Make second task completed
 
         mock_user_gateway.find_user_by_id.return_value = user
         mock_task_gateway.find_tasks_by_user_id.return_value = tasks
 
-        mock_uow = MagicMock()
-        use_case = ListTasksByUserUseCase(
-            mock_task_gateway, mock_user_gateway, mock_uow
-        )
+        use_case = ListTasksByUserUseCase(mock_task_gateway, mock_user_gateway)
 
         # Act
         result = use_case.execute(user_id)
 
         # Assert
-        assert len(result.tasks) == 2
-        assert result.tasks[0].title == "Task 1"
+        assert isinstance(result, list)
+        assert len(result) == 2
+        assert all(isinstance(task, TaskEntity) for task in result)
+        assert result[0].title == "Task 1"
+        assert result[1].title == "Task 2"
         mock_user_gateway.find_user_by_id.assert_called_once_with(user_id)
         mock_task_gateway.find_tasks_by_user_id.assert_called_once_with(user_id)
 
@@ -71,10 +66,7 @@ class TestListTasksByUserUseCase:
         user_id = 999
         mock_user_gateway.find_user_by_id.return_value = None
 
-        mock_uow = MagicMock()
-        use_case = ListTasksByUserUseCase(
-            mock_task_gateway, mock_user_gateway, mock_uow
-        )
+        use_case = ListTasksByUserUseCase(mock_task_gateway, mock_user_gateway)
 
         # Act & Assert
         with pytest.raises(UserNotFoundException):
@@ -101,15 +93,30 @@ class TestListTasksByUserUseCase:
         mock_user_gateway.find_user_by_id.return_value = user
         mock_task_gateway.find_tasks_by_user_id.return_value = []
 
-        mock_uow = MagicMock()
-        use_case = ListTasksByUserUseCase(
-            mock_task_gateway, mock_user_gateway, mock_uow
-        )
+        use_case = ListTasksByUserUseCase(mock_task_gateway, mock_user_gateway)
 
         # Act
         result = use_case.execute(user_id)
 
         # Assert
-        assert len(result.tasks) == 0
+        assert isinstance(result, list)
+        assert len(result) == 0
         mock_user_gateway.find_user_by_id.assert_called_once_with(user_id)
         mock_task_gateway.find_tasks_by_user_id.assert_called_once_with(user_id)
+
+
+# Fixtures
+@pytest.fixture
+def mock_task_gateway():
+    """Mock task gateway."""
+    from domain.gateways.task_gateway import TaskGateway
+
+    return MagicMock(spec=TaskGateway)
+
+
+@pytest.fixture
+def mock_user_gateway():
+    """Mock user gateway."""
+    from domain.gateways.user_gateway import UserGateway
+
+    return MagicMock(spec=UserGateway)

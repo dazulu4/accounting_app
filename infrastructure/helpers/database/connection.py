@@ -23,7 +23,6 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.pool import QueuePool
 
 from application.config.environment import DatabaseConfig, settings
-from domain.constants.task_constants import TransactionConstants
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -128,19 +127,12 @@ class DatabaseConnection:
         """Configure session with enterprise settings"""
         try:
             # Set transaction timeout
-            session.execute(
-                text(
-                    f"SET SESSION innodb_lock_wait_timeout = {TransactionConstants.DEFAULT_TIMEOUT}"
-                )
-            )
+            session.execute(text("SET SESSION innodb_lock_wait_timeout = 30"))
 
-            # Set isolation level (if not default)
-            if TransactionConstants.READ_COMMITTED != "READ_COMMITTED":
-                session.execute(
-                    text(
-                        f"SET SESSION TRANSACTION ISOLATION LEVEL {TransactionConstants.READ_COMMITTED}"
-                    )
-                )
+            # Set isolation level to READ committed (standard)
+            session.execute(
+                text("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
+            )
 
         except Exception as e:
             logger.warning(

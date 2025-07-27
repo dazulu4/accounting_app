@@ -29,7 +29,6 @@ pydantic-settings = "^2.10.1"
 # Utilities
 structlog = "^25.4.0"
 python-dotenv = "^1.1.1"
-psutil = "^7.0.0"
 cryptography = "^45.0.5"
 
 [tool.poetry.group.dev.dependencies]

@@ -106,7 +106,7 @@ class TestHTTPErrorHandler:
         ):
             response_data, status_code = HTTPErrorHandler.handle_exception(exception)
 
-            assert status_code == 400
+            assert status_code == 422
             assert response_data["error"]["request_id"] is not None
             assert len(response_data["error"]["request_id"]) > 0
             # Verify request_id was set on request object

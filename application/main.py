@@ -213,28 +213,22 @@ def _configure_error_handlers(app: Flask) -> None:
     """Configure application error handlers"""
     logger.debug("configuring_error_handlers")
 
-    # Import HTTPErrorHandler
-    from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler
+    # Import HTTPErrorHandler and error response utilities
+    from infrastructure.helpers.errors.error_handlers import HTTPErrorHandler, create_error_response
 
     @app.errorhandler(404)
     def handle_not_found(error):
         """Handle 404 Not Found errors"""
         logger.warning("not_found_error", path=request.path, method=request.method)
 
-        return (
-            jsonify(
-                {
-                    "error": {
-                        "type": "NOT_FOUND",
-                        "code": "RESOURCE_NOT_FOUND",
-                        "message": f"The requested resource '{request.path}' was not found",
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "path": request.path,
-                    }
-                }
-            ),
-            404,
+        response_dict, status_code = create_error_response(
+            error_type="NOT_FOUND",
+            error_code="RESOURCE_NOT_FOUND",
+            message=f"The requested resource '{request.path}' was not found",
+            status_code=404
         )
+        
+        return jsonify(response_dict), status_code
 
     @app.errorhandler(405)
     def handle_method_not_allowed(error):
@@ -246,26 +240,26 @@ def _configure_error_handlers(app: Flask) -> None:
             allowed_methods=getattr(error, "valid_methods", []),
         )
 
-        return (
-            jsonify(
-                {
-                    "error": {
-                        "type": "METHOD_NOT_ALLOWED",
-                        "code": "INVALID_HTTP_METHOD",
-                        "message": f"Method '{request.method}' not allowed for '{request.path}'",
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "path": request.path,
-                        "method": request.method,
-                    }
-                }
-            ),
-            405,
+        response_dict, status_code = create_error_response(
+            error_type="METHOD_NOT_ALLOWED",
+            error_code="INVALID_HTTP_METHOD",
+            message=f"Method '{request.method}' not allowed for '{request.path}'",
+            status_code=405
         )
+        
+        return jsonify(response_dict), status_code
 
     @app.errorhandler(Exception)
     def handle_general_exception(error):
         """Handle all unhandled exceptions using HTTPErrorHandler"""
-        logger.error("unhandled_exception", error=str(error), exc_info=True)
+        # Agregar más información de depuración
+        logger.error(
+            "unhandled_exception", 
+            error=str(error), 
+            error_type=type(error).__name__,
+            error_class=error.__class__.__name__,
+            exc_info=True
+        )
 
         # Use HTTPErrorHandler to get proper response
         response_dict, status_code = HTTPErrorHandler.handle_exception(error)

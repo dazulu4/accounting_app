@@ -218,7 +218,7 @@ class BusinessRuleViolationException(BusinessException):
         super().__init__(
             message=message,
             error_code=ErrorCodeEnum.BUSINESS_RULE_VIOLATION,
-            http_status_code=400,
+            http_status_code=422,
             details=business_details,
         )
 

@@ -33,7 +33,6 @@ class ErrorCodeEnum(str, Enum):
     # User-related errors
     USER_NOT_FOUND = "USER_NOT_FOUND"
     USER_NOT_ACTIVE = "USER_NOT_ACTIVE"
-    USER_SUSPENDED = "USER_SUSPENDED"
 
     # Task-related errors
     TASK_NOT_FOUND = "TASK_NOT_FOUND"
@@ -41,15 +40,6 @@ class ErrorCodeEnum(str, Enum):
     TASK_ALREADY_CANCELLED = "TASK_ALREADY_CANCELLED"
     INVALID_TASK_TRANSITION = "INVALID_TASK_TRANSITION"
     MAX_TASKS_EXCEEDED = "MAX_TASKS_EXCEEDED"
-    TASK_ASSIGNMENT_FAILED = "TASK_ASSIGNMENT_FAILED"
-
-    # Data validation errors
-    INVALID_TITLE = "INVALID_TITLE"
-    INVALID_DESCRIPTION = "INVALID_DESCRIPTION"
-    INVALID_USER_ID = "INVALID_USER_ID"
-    INVALID_TASK_ID = "INVALID_TASK_ID"
-    INVALID_STATUS = "INVALID_STATUS"
-    INVALID_PRIORITY = "INVALID_PRIORITY"
 
 
 class BusinessException(Exception):
@@ -138,14 +128,6 @@ class ValidationException(BusinessException):
             http_status_code=422,  # Unprocessable Entity
             details=validation_details,
         )
-
-
-class TaskValidationException(ValidationException):
-    """Raised when task data validation fails"""
-
-
-class UserValidationException(ValidationException):
-    """Raised when user data validation fails"""
 
 
 # =============================================================================
@@ -275,7 +257,7 @@ class TaskStateException(BusinessException):
         super().__init__(
             message=message,
             error_code=error_code,
-            http_status_code=409,  # Conflict
+            http_status_code=422,
             details=state_details,
         )
 
@@ -377,96 +359,3 @@ class DatabaseException(InfrastructureException):
             details=db_details,
             inner_exception=inner_exception,
         )
-
-
-class ExternalServiceException(InfrastructureException):
-    """Raised when external service calls fail"""
-
-    def __init__(
-        self,
-        message: str,
-        service_name: str,
-        endpoint: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        inner_exception: Optional[Exception] = None,
-    ):
-        service_details = details or {}
-        service_details["service_name"] = service_name
-        if endpoint:
-            service_details["endpoint"] = endpoint
-
-        super().__init__(
-            message=message,
-            component="external_service",
-            details=service_details,
-            inner_exception=inner_exception,
-        )
-
-
-# =============================================================================
-# EXCEPTION UTILITIES
-# =============================================================================
-
-
-class ExceptionMapper:
-    """
-    Utility class for mapping exceptions to HTTP responses
-
-    Provides centralized mapping of business exceptions to appropriate
-    HTTP status codes and error response formats.
-    """
-
-    @staticmethod
-    def get_http_status_code(exception: Exception) -> int:
-        """
-        Get appropriate HTTP status code for an exception
-
-        Args:
-            exception: Exception instance
-
-        Returns:
-            int: HTTP status code
-        """
-        if isinstance(exception, BusinessException):
-            return exception.http_status_code
-
-        # Default mapping for common exceptions
-        exception_mapping = {
-            ValueError: 400,
-            TypeError: 400,
-            KeyError: 404,
-            PermissionError: 403,
-            TimeoutError: 408,
-            ConnectionError: 503,
-        }
-
-        return exception_mapping.get(type(exception), 500)
-
-    @staticmethod
-    def exception_to_error_response(exception: Exception) -> Dict[str, Any]:
-        """
-        Convert exception to standardized error response
-
-        Args:
-            exception: Exception instance
-
-        Returns:
-            Dict: Standardized error response
-        """
-        if isinstance(exception, BusinessException):
-            return {
-                "error": exception.to_dict(),
-                "timestamp": None,  # Will be set by the API layer
-                "path": None,  # Will be set by the API layer
-            }
-
-        # Handle non-business exceptions
-        return {
-            "error": {
-                "error_code": "INTERNAL_ERROR",
-                "message": str(exception),
-                "http_status_code": ExceptionMapper.get_http_status_code(exception),
-            },
-            "timestamp": None,
-            "path": None,
-        }

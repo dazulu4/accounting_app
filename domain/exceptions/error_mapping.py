@@ -77,7 +77,6 @@ class ErrorMappingRegistry:
         # These will be imported from infrastructure layer
         # InfrastructureException: (500, "SERVICE_UNAVAILABLE"),
         # DatabaseException: (500, "DATABASE_ERROR"),
-        # ExternalServiceException: (502, "EXTERNAL_SERVICE_ERROR"),
     }
     
     @classmethod

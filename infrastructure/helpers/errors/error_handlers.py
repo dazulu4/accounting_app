@@ -23,7 +23,6 @@ from pydantic import ValidationError
 from domain.exceptions.business_exceptions import (
     BusinessException,
     DatabaseException,
-    ExternalServiceException,
     InfrastructureException,
 )
 from domain.exceptions.error_mapping import ErrorMappingRegistry
@@ -34,9 +33,6 @@ logger = get_logger(__name__)
 # Register infrastructure exceptions with the centralized registry
 ErrorMappingRegistry.register_infrastructure_exception(
     DatabaseException, 500, "DATABASE_ERROR"
-)
-ErrorMappingRegistry.register_infrastructure_exception(
-    ExternalServiceException, 502, "EXTERNAL_SERVICE_ERROR"
 )
 ErrorMappingRegistry.register_infrastructure_exception(
     InfrastructureException, 503, "SERVICE_UNAVAILABLE"

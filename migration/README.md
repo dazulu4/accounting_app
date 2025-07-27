@@ -11,6 +11,8 @@ Gestión profesional de migraciones de bases de datos con Alembic, con caracter�
 -   **Logging completo** con salida estructurada.
 -   **Herramientas de validación** y verificación de migraciones.
 -   **Optimización para MySQL** con índices y restricciones adecuadas.
+-   **Validación de datos** con restricciones de integridad.
+-   **Sistema de manejo de errores** integrado con el sistema centralizado.
 
 ## Guía de Inicio Rápido
 
@@ -114,11 +116,11 @@ La tabla principal `tasks` con un diseño de esquema de nivel empresarial:
 ```sql
 CREATE TABLE tasks (
     task_id CHAR(36) NOT NULL COMMENT 'Identificador único de la tarea (UUID)',
-    title VARCHAR(200) NOT NULL COMMENT 'Título o resumen de la tarea',
-    description TEXT NOT NULL COMMENT 'Descripción detallada de la tarea',
+    title VARCHAR(200) NOT NULL COMMENT 'Título o resumen de la tarea (no puede estar vacío)',
+    description TEXT NOT NULL COMMENT 'Descripción detallada de la tarea (no puede estar vacío)',
     user_id INTEGER NOT NULL COMMENT 'ID del usuario propietario de la tarea',
-    status VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT 'Estado de la tarea',
-    priority VARCHAR(10) NOT NULL DEFAULT 'medium' COMMENT 'Prioridad de la tarea',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT 'Estado de la tarea (pending, in_progress, completed, cancelled)',
+    priority VARCHAR(10) NOT NULL DEFAULT 'medium' COMMENT 'Prioridad de la tarea (low, medium, high, urgent)',
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     completed_at DATETIME(6) NULL COMMENT 'Timestamp de finalización de la tarea',

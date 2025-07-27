@@ -16,6 +16,7 @@ Nuestra estrategia de pruebas se divide en dos categorías principales:
     -   Son rápidas de ejecutar.
     -   No requieren un entorno complejo.
     -   Cualquier dependencia externa se simula (mock). Por ejemplo, al probar un caso de uso, el gateway de la base de datos se reemplaza por un mock.
+    -   Cubren entidades de dominio, casos de uso, y manejo de errores.
 
 ### 2. Pruebas de Integración (`tests/integration/`)
 
@@ -25,6 +26,16 @@ Nuestra estrategia de pruebas se divide en dos categorías principales:
     -   Son más lentas que las pruebas unitarias.
     -   Requieren un entorno más completo (e.g., una base de datos de prueba).
     -   Son cruciales para asegurar que las diferentes partes del sistema funcionan bien juntas.
+    -   Incluyen pruebas de endpoints HTTP y manejo de errores.
+
+### 3. Cobertura de Pruebas
+
+El sistema mantiene una cobertura de pruebas del **50%** como mínimo, con énfasis en:
+
+- **Entidades de dominio**: Validación de reglas de negocio
+- **Casos de uso**: Lógica de aplicación
+- **Manejo de errores**: Sistema centralizado de errores
+- **Validación de datos**: Esquemas Pydantic
 
 ---
 

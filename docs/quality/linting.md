@@ -70,4 +70,6 @@ Asegúrate de que todos estos comandos se ejecuten sin errores antes de enviar u
 
 ---
 
-Para saber cómo ejecutar las pruebas automatizadas, consulta la [Estrategia de Pruebas](./testing.md). 
+Para saber cómo ejecutar las pruebas automatizadas, consulta la [Estrategia de Pruebas](./testing.md).
+
+Para entender el sistema de manejo de errores, consulta el [Sistema de Manejo de Errores](./error-handling.md). 

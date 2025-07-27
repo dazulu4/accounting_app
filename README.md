@@ -4,6 +4,17 @@ Backend para un **Task Manager especializado en tareas contables**, desarrollado
 
 Este sistema permite a los equipos de contabilidad gestionar, organizar y dar seguimiento a sus tareas diarias de manera eficiente, desde conciliaciones bancarias hasta cierre de períodos fiscales.
 
+## 🚀 Características Principales
+
+- ✅ **Gestión de tareas contables**: Crear, asignar y dar seguimiento a tareas específicas
+- 👥 **Colaboración de equipo**: Asignar tareas a diferentes miembros del equipo contable
+- 📊 **Estados de seguimiento**: Pending, In Progress, Completed, Cancelled
+- 🔄 **Priorización**: Gestión de prioridades (Low, Medium, High, Urgent)
+- 📈 **Organización por usuario**: Visualizar tareas asignadas a cada contador
+- 🛡️ **Manejo robusto de errores**: Sistema centralizado de errores con códigos HTTP apropiados
+- 📝 **Validación de datos**: Validación automática con Pydantic
+- 🔍 **Logging estructurado**: Logs detallados para monitoreo y debugging
+
 ---
 
 ## 🎯 ¿Qué es Task Manager Contable?
@@ -23,6 +34,24 @@ Este sistema permite a los equipos de contabilidad gestionar, organizar y dar se
 - Cierre mensual/anual
 - Auditorías internas
 - Tareas de cumplimiento fiscal
+
+### Arquitectura del Sistema
+
+El proyecto sigue **Clean Architecture** con estas capas:
+
+- **🌟 Domain**: Entidades de negocio (Task, User) y reglas de negocio
+- **⚙️ Application**: Casos de uso (CreateTask, CompleteTask, ListTasks)
+- **🔌 Infrastructure**: Adaptadores externos (HTTP routes, Database, etc.)
+
+### Manejo de Errores
+
+El sistema implementa un **manejo centralizado de errores** con códigos HTTP apropiados:
+
+- **400**: Errores de validación de datos de entrada
+- **404**: Recursos no encontrados
+- **422**: Errores de reglas de negocio
+- **500**: Errores técnicos del sistema
+- **429**: Rate limiting (más de 10 peticiones por minuto)
 
 ---
 
@@ -79,10 +108,11 @@ El servidor estará disponible en `http://127.0.0.1:8000`.
 Una vez que el servidor esté corriendo, puedes interactuar con estos endpoints principales:
 
 ```bash
-# Health check
+# Health check y versión
 GET /api/health
+GET /api/version
 
-# Crear una nueva tarea
+# Gestión de tareas
 POST /api/tasks
 {
   "title": "Conciliación bancaria enero",
@@ -91,17 +121,49 @@ POST /api/tasks
   "priority": "high"
 }
 
-# Completar una tarea
 PUT /api/tasks/{task_id}/complete
 
-# Listar tareas por usuario
-GET /api/users/{user_id}/tasks
-
-# Listar todos los usuarios
+# Gestión de usuarios
 GET /api/users
+GET /api/users/{user_id}/tasks
 ```
 
-### 6. Ejecutar Validaciones de Calidad
+### 6. Ejemplos de Respuestas
+
+**Crear tarea exitosa (201):**
+```json
+{
+  "task_id": "3b403685-66a9-4697-9876-47fe8e06dbbb",
+  "title": "Conciliación bancaria enero",
+  "description": "Conciliar cuenta corriente principal",
+  "user_id": 1,
+  "status": "pending",
+  "priority": "high",
+  "created_at": "2025-01-27T13:52:54.418313+00:00"
+}
+```
+
+**Error de validación (400):**
+```json
+{
+  "error": {
+    "type": "VALIDATION_ERROR",
+    "code": "VALIDATION_ERROR",
+    "message": "Validation failed for the following fields: title",
+    "timestamp": "2025-01-27T13:52:54.418313+00:00",
+    "request_id": "1e531181-0961-4825-b251-a524df256614",
+    "path": "/api/tasks",
+    "method": "POST",
+    "details": {
+      "field_errors": {
+        "title": "Task title cannot be empty or whitespace"
+      }
+    }
+  }
+}
+```
+
+### 7. Ejecutar Validaciones de Calidad
 
 Para asegurar la calidad del código, puedes ejecutar las siguientes herramientas:
 
@@ -117,6 +179,9 @@ poetry run black . --check
 poetry run isort . --check-only
 poetry run flake8
 poetry run mypy .
+
+# Ejecutar todas las validaciones de calidad
+./scripts/quality.sh
 ```
 
 ---
@@ -132,9 +197,20 @@ El proyecto sigue **Clean Architecture** con estas capas:
 ### Estructura del Proyecto
 ```
 accounting_app/
-├── domain/           # Capa de dominio (entidades, use cases)
+├── domain/           # Capa de dominio (entidades, use cases, excepciones)
+│   ├── entities/     # Entidades de negocio (TaskEntity, UserEntity)
+│   ├── usecases/     # Casos de uso (CreateTaskUseCase, CompleteTaskUseCase)
+│   ├── exceptions/   # Excepciones de negocio y mapeo de errores
+│   ├── gateways/     # Interfaces para repositorios
+│   └── enums/        # Enumeraciones de dominio
 ├── application/      # Configuración y punto de entrada
+│   ├── config/       # Configuración de la aplicación
+│   ├── schemas/      # Esquemas de validación (Pydantic)
+│   └── container.py  # Inyección de dependencias
 ├── infrastructure/   # Adaptadores y drivers externos
+│   ├── entrypoints/  # Endpoints HTTP (Flask routes)
+│   ├── driven_adapters/ # Repositorios y adaptadores
+│   └── helpers/      # Utilidades (logging, errores, middleware)
 ├── tests/            # Pruebas unitarias y de integración
 ├── migration/        # Migraciones de base de datos (Alembic)
 └── docs/             # Documentación del proyecto

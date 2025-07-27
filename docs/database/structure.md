@@ -13,14 +13,30 @@ La base de datos se centra en una única entidad de negocio principal: las **Tar
 -   **Propósito**: Almacena las tareas contables que deben realizarse.
 -   **Campos Clave**:
     -   `task_id`: Identificador único de la tarea (UUID en formato CHAR(36)).
-    -   `title`: Título de la tarea (VARCHAR(200)).
-    -   `description`: Descripción detallada de la tarea (TEXT).
+    -   `title`: Título de la tarea (VARCHAR(200), no puede estar vacío).
+    -   `description`: Descripción detallada de la tarea (TEXT, no puede estar vacío).
     -   `user_id`: ID del usuario propietario de la tarea (INTEGER). Este ID corresponde a un usuario definido fuera de la base de datos (en un archivo JSON).
-    -   `status`: Estado de la tarea (VARCHAR(20), e.g., `pending`, `in_progress`, `completed`).
-    -   `priority`: Prioridad de la tarea (VARCHAR(10), e.g., `low`, `medium`, `high`).
+    -   `status`: Estado de la tarea (VARCHAR(20), e.g., `pending`, `in_progress`, `completed`, `cancelled`).
+    -   `priority`: Prioridad de la tarea (VARCHAR(10), e.g., `low`, `medium`, `high`, `urgent`).
     -   `created_at`: Fecha y hora de creación (DATETIME).
     -   `updated_at`: Fecha y hora de la última actualización (DATETIME).
     -   `completed_at`: Fecha y hora de finalización (DATETIME, puede ser nulo).
+
+### Estados de Tarea
+
+El sistema maneja los siguientes estados de tarea con transiciones controladas:
+
+- **PENDING**: Tarea creada pero no iniciada
+- **IN_PROGRESS**: Tarea en progreso activo
+- **COMPLETED**: Tarea finalizada exitosamente
+- **CANCELLED**: Tarea cancelada (estado terminal)
+
+### Prioridades de Tarea
+
+- **LOW**: Prioridad baja
+- **MEDIUM**: Prioridad media (por defecto)
+- **HIGH**: Prioridad alta
+- **URGENT**: Prioridad urgente
 
 ---
 

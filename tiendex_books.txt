@@ -1,0 +1,43 @@
+ Implementación del sistema contable Tiendex Books para la gestión financiera integral del ecosistema Tiendex
+
+Objetivo General
+Desarrollar e implementar Tiendex Books como la solución contable integrada del ecosistema Tiendex, con el propósito de centralizar, automatizar y simplificar la gestión contable y fiscal de comerciantes, emprendedores, administradores y contadores.
+El sistema permitirá el cumplimiento de las Normas Internacionales de Información Financiera (NIIF) y las obligaciones tributarias locales, integrándose de forma nativa con los módulos del ecosistema Tiendex, para consolidar la información financiera en tiempo real.
+Tiendex Books estará orientado a usuarios con y sin formación contable, mediante una interfaz intuitiva y procesos guiados, y contará con una arquitectura modular que facilite su adaptación a cambios normativos, regulatorios y de jurisdicción fiscal territorial (departamental, municipal o internacional), soportando la evolución y escalabilidad del ecosistema.
+Alcance General del Proyecto
+Tiendex Books será la aplicación contable del ecosistema Tiendex, orientada a cubrir los procesos contables y fiscales de pequeñas y medianas empresas, en cumplimiento de las Normas Internacionales de Información Financiera (NIIF) y de la normativa tributaria local.
+
+La solución incluirá los siguientes módulos funcionales:
+Plan de cuentas y registros contables: configuración flexible del plan de cuentas, gestión de asientos y comprobantes contables.
+Libros oficiales: generación de libros contables requeridos por la regulación vigente.
+Gestión de impuestos: cálculo y gestión de obligaciones tributarias.
+Reportes financieros y de gestión: informes financieros, tributarios y operativos con múltiples criterios de filtrado y exportación.
+Cierre contable: procesos de cierre contable mensual y anual.
+Administración de activos fijos: registro, gestión y cálculo automatizado de depreciaciones.
+Conciliación bancaria: conciliación manual de cuentas bancarias, con proyección de automatización futura.
+
+Características clave:
+Multimoneda y multiempresa: soporte para transacciones en múltiples monedas y para la gestión contable de múltiples razones sociales.
+Integración con fuentes para carga de información:
+Generación automática de asientos contables a partir de eventos de negocio (ventas, compras, pagos, nómina, inventarios, activos fijos).
+Integración con los módulos funcionales del ecosistema Tiendex a través de la API (ventas, compras, etc.).
+Importación de documentos electrónicos en formato XML estructurado (como facturas electrónicas o nómina electrónica), con transformación automática en asientos contables según reglas parametrizadas.
+Cumplimiento fiscal:
+Generación de archivos requeridos por la DIAN, compatibles con el prevalidador oficial.
+Asistentes guiados para la preparación de reportes fiscales.
+Panel financiero:
+Indicadores clave, gráficos interactivos y alertas automáticas (vencimientos fiscales, conciliaciones, cierres contables).
+Importación de información:
+Importación de saldos iniciales mediante plantillas estructuradas.
+Seguridad y control:
+Control de acceso basado en el sistema unificado de roles y permisos del ecosistema Tiendex.
+Compatibilidad con operación multiempresa.
+Registro detallado de cambios en bitácora de auditoría.
+Adaptabilidad:
+Soporte para diferentes tipos de personas (naturales, jurídicas, regímenes tributarios diversos).
+Soporte para contabilidad de múltiples negocios a nombre de la misma cuenta de usuario.
+Arquitectura modular preparada para adaptaciones normativas y expansión internacional.
+Experiencia de usuario:
+Interfaz intuitiva para usuarios con y sin conocimientos contables, siguiendo los lineamientos y estándares del manual de marca de Tiendex.
+Sistema de ayuda interactiva, onboarding guiado y documentación contextual.
+Canal de soporte integrado.
